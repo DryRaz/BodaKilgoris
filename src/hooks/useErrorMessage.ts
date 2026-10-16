@@ -32,6 +32,8 @@ export function useErrorMessage() {
       ) {
         return t('network');
       }
+      // the user only sees the generic text; the real error goes to the browser console
+      console.error('[boda] generic error shown. Raw error:', err);
       return t('generic');
     },
     [t],

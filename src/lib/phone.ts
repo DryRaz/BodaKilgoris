@@ -1,9 +1,9 @@
-// Kenyan mobile numbers: 07xx xxx xxx, 01xx xxx xxx, +2547..., 2547..., or 7xxxxxxxx.
+// Kenyan mobile numbers: 07xx xxx xxx, 01xx xxx xxx, +2547..., 2547..., 7xxxxxxxx (and +254 07.. typos).
 // Stored normalised as +254XXXXXXXXX (matches the DB check on profiles.phone).
 export function normalizePhone(input: unknown): string | null {
   if (typeof input !== 'string') return null;
   const digits = input.replace(/[\s\-().]/g, '');
-  const m = /^(?:\+?254|0)?([17]\d{8})$/.exec(digits);
+  const m = /^(?:\+?254)?0?([17]\d{8})$/.exec(digits);
   return m ? `+254${m[1]}` : null;
 }
 

@@ -103,6 +103,19 @@ npm run dev                       # http://localhost:3000
 
 ---
 
+### 3.5 Dépannage : « Something went wrong. Please try again. »
+
+Ce message générique cache la vraie erreur à l'utilisateur, mais **elle est écrite en entier** (message, code, status, details, hint) :
+
+- **côté serveur** : Vercel → votre projet → *Logs* (ou le terminal de `npm run dev`), lignes `[boda:<route>:<étape>]` ;
+- **côté navigateur** : console, ligne `[boda] generic error shown. Raw error: …`.
+
+Pour un diagnostic automatique de la configuration : `npm run doctor` (variables, configuration d'auth, tables, fonctions, bucket ; chaque ✗ dit quoi corriger).
+
+Cause la plus fréquente : **le fournisseur « Email » de Supabase est désactivé**
+(log : `422 … email_provider_disabled`). L'app s'en sert en interne (email + mot de passe dérivés du téléphone), même si personne ne saisit jamais d'email.
+→ Supabase → *Authentication → Sign In / Providers → Email* → **Enable Email provider : ON**. Ne désactivez **que** « Allow new users to sign up » (cela n'a aucun effet sur l'app).
+
 ## 4. Données de démo
 
 `npm run seed` crée **5 Bodas** et **3 clients** (mélange EN / SW), 3 Bodas en ligne autour du centre-ville, 1 Boda hors ligne, 1 Boda *pending* (pour démontrer la validation), et **14 jours d'historique** (≈110 demandes, dont un couple « suspect » qui enchaîne 12 courses) pour que le dashboard ne soit pas vide.
@@ -180,6 +193,7 @@ Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis 
 | Commande | Ce qu'elle vérifie |
 |---|---|
 | `npm run test:db` | Exécute la **vraie migration** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin (70 assertions) |
+| `npm run test:unit` | Normalisation des téléphones (+254…, 07…, 7…, avec espaces/tirets → même format stocké) |
 | `npm run typecheck` / `npm run lint` | Types (dont clés de traduction) et ESLint |
 | `npm run i18n:check` | Cohérence EN / SW |
 

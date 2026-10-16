@@ -17,7 +17,9 @@
     "test:db": "node supabase/tests/state-machine.test.mjs",
     "seed": "node scripts/seed.mjs",
     "simulate": "node scripts/simulate.mjs",
-    "create-admin": "node scripts/create-admin.mjs"
+    "create-admin": "node scripts/create-admin.mjs",
+    "test:unit": "node --test src/lib/phone.test.ts",
+    "doctor": "node scripts/doctor.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

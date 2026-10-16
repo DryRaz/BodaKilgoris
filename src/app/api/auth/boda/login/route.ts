@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { normalizePhone, isValidPin } from '@/lib/phone';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { logError, maskPhone, isBadCredentials } from '@/lib/server/log';
 import {
   bodaPassword, emailForPhone, jsonError, MAX_PIN_ATTEMPTS, PIN_LOCK_MINUTES, sessionTokens,
 } from '@/lib/server/auth';
@@ -14,11 +15,17 @@ export async function POST(request: Request) {
   if (!isValidPin(pin)) return jsonError('invalid_pin');
 
   const admin = createSupabaseAdminClient();
-  const { data: profile } = await admin
+  const ctx = { route: 'boda/login', phone: maskPhone(phone) };
+  const { data: profile, error: lookupErr } = await admin
     .from('profiles')
     .select('id, role, language, pin_failed_attempts, pin_locked_until')
     .eq('phone', phone)
     .maybeSingle();
+
+  if (lookupErr) {
+    logError('boda/login:lookup-profile', lookupErr, ctx);
+    return jsonError('generic', 500);
+  }
 
   // same answer for "unknown number" and "wrong PIN": no account enumeration
   if (!profile || profile.role !== 'boda') return jsonError('invalid_credentials', 401);
@@ -34,6 +41,9 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    logError('boda/login:sign-in', error, ctx);
+    // e.g. email provider disabled / bad API key: not the user's fault, do not count it as a wrong PIN
+    if (!isBadCredentials(error)) return jsonError('generic', 500);
     const attempts = (profile.pin_failed_attempts ?? 0) + 1;
     const lock = attempts >= MAX_PIN_ATTEMPTS;
     await admin

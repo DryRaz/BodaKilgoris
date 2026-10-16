@@ -1,4 +1,5 @@
 import { jsonError, requireAdmin } from '@/lib/server/auth';
+import { logError } from '@/lib/server/log';
 
 const COLUMNS = [
   'id', 'requested_at', 'requested_at_nairobi', 'status', 'counted', 'suspect', 'suspect_reason',
@@ -43,7 +44,10 @@ export async function GET(request: Request) {
     if (onlyCounted) q = q.eq('counted', true);
     if (onlySuspect) q = q.eq('suspect', true);
     const { data, error } = await q.range(offset, offset + PAGE - 1);
-    if (error) return jsonError('generic', 500);
+    if (error) {
+      logError('admin/export', error, { route: 'admin/export' });
+      return jsonError('generic', 500);
+    }
     rows.push(...(data ?? []));
     if (!data || data.length < PAGE) break;
   }

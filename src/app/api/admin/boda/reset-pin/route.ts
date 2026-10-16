@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isValidPin } from '@/lib/phone';
 import { bodaPassword, jsonError, requireAdmin } from '@/lib/server/auth';
+import { logError } from '@/lib/server/log';
 
 /** A Boda forgot their PIN: the admin sets a new one and unlocks the account. */
 export async function POST(request: Request) {
@@ -19,7 +20,10 @@ export async function POST(request: Request) {
   const { error } = await ctx.admin.auth.admin.updateUserById(profile.id, {
     password: bodaPassword(profile.phone, pin),
   });
-  if (error) return jsonError('generic', 500);
+  if (error) {
+    logError('admin/reset-pin', error, { route: 'admin/reset-pin' });
+    return jsonError('generic', 500);
+  }
   await ctx.admin.from('profiles').update({ pin_failed_attempts: 0, pin_locked_until: null }).eq('id', profile.id);
   return NextResponse.json({ ok: true });
 }
