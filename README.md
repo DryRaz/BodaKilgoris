@@ -1,2 +1,211 @@
-# BodaKilgoris
-Boda Strategy
+# Boda Kilgoris
+
+PWA mobile (installable) qui met en relation **clients** et **conducteurs de moto-taxi (Bodas)** à Kilgoris, Kenya.
+Interface **entièrement bilingue English / Kiswahili**.
+
+**Phase 1 (3 mois) : gratuit, paiement en cash hors application.** Le but est de **compter les courses de façon
+fiable** pour décider ensuite du modèle de rémunération. Le dashboard admin répond à la question :
+*« combien de courses réelles passent par l'app chaque jour ? »*
+
+- **Stack** : Next.js 16 (App Router) · TypeScript · Tailwind 4 · Supabase (Postgres, Auth, Realtime, Storage) · Leaflet + OpenStreetMap · next-intl · Vercel
+- **Pensé pour** : connexions lentes et Android bas de gamme (polices système, photo compressée à ~100 Ko, aucun SDK de carte propriétaire, polling de secours en plus du temps réel)
+
+---
+
+## 1. Ce qui est construit
+
+| Interface | Écrans |
+|---|---|
+| **Premier lancement** | Choix de langue (2 gros boutons) avant toute inscription |
+| **Boda** (`/boda`) | Inscription (nom, téléphone, plaque, photo, PIN 4 chiffres) · statut *pending* tant que l'admin n'a pas validé · gros bouton disponible / indisponible · GPS toutes les ~12 s uniquement si disponible · demandes entrantes en temps réel avec mini-carte, accepter/refuser, expiration à 2 min · « Je suis arrivé » → « Course terminée » (+ prix optionnel) · indisponible automatiquement pendant une course |
+| **Client** (`/client`) | Nom + téléphone, session persistante · carte avec tous les Bodas disponibles **avec leur nom** · liste triée par distance avec note moyenne · le client **choisit** son Boda · point de prise en charge par GPS ou épingle · destination en texte libre · attente, suivi du Boda sur la carte, confirmation + note 1–5 (optionnelle) |
+| **Admin** (`/admin`) | Validation / suspension des Bodas · compteurs jour / semaine / mois · stats par Boda · taux et temps moyen d'acceptation · Bodas actifs par jour · courses suspectes · carte en direct · export CSV · réinitialisation du PIN d'un Boda |
+| **Réglages** (`/settings`) | Langue, consentement GPS (retirable), déconnexion, installation PWA |
+
+Hors périmètre (volontairement absent) : M-Pesa, commissions, abonnements, calcul de prix, chat.
+Seul le **schéma** d'un pass journalier/hebdomadaire est prévu (table `boda_passes`, non utilisée).
+
+---
+
+## 2. Comment une course est comptée
+
+```
+requested ──accept──▶ accepted ──arrive──▶ arrived ──complete──▶ completed
+   │  │  │               │                    │
+   │  │  └─cancel────────┴────cancel──────────┘──▶ cancelled
+   │  └─decline──▶ declined
+   └─2 min sans réponse──▶ expired
+```
+
+La machine d'états est **imposée en base** (trigger `rides_guard`), pas seulement dans l'interface.
+
+Une course est **comptabilisée** (`counted = true`) uniquement si **le Boda ET le client ont confirmé** :
+
+- le Boda confirme en appuyant sur « Course terminée » ;
+- le client confirme avec « Confirmer la course » (+ note) ;
+- sans réponse du client sous **30 min**, confirmation automatique avec le drapeau `auto_confirmed`.
+
+Drapeau **`suspect`** (la course reste comptée, mais est isolée dans le dashboard) si :
+
+- `completed_at − accepted_at < 2 min` → raison `too_fast` ;
+- le même couple client/Boda dépasse **10 courses par jour** → raison `pair_frequency` (toutes les courses du couple ce jour-là sont marquées).
+
+Le dashboard distingue donc *comptées* et *comptées non suspectes* : c'est ce second chiffre qui est le plus proche de la réalité.
+
+Taux d'acceptation = courses acceptées ÷ (acceptées + refusées + expirées) sur 30 jours (une annulation du client avant réponse est exclue).
+Un Boda est « actif » un jour donné s'il a envoyé au moins une position ce jour-là.
+
+Tous les seuils (2 min, 30 min, 10/jour, fraîcheur de position…) sont dans la table `app_settings` : modifiables en SQL sans redéployer.
+Les jours sont calculés en fuseau **Africa/Nairobi**.
+
+---
+
+## 3. Installation
+
+### 3.1 Supabase
+
+1. Créez un projet sur [supabase.com](https://supabase.com) (région la plus proche du Kenya).
+2. **SQL Editor** → collez et exécutez **`supabase/migrations/20261016000000_init.sql`** (tables, RLS, fonctions, realtime, bucket photos).
+3. **Authentication → Providers → Email** : laissez le fournisseur Email **activé**, mais :
+   - désactivez **« Allow new users to sign up »** (les comptes sont créés uniquement par le serveur) ;
+   - la confirmation d'email n'est pas nécessaire (les comptes sont créés déjà confirmés).
+4. *(Optionnel mais recommandé)* `supabase/optional_cron.sql` : active pg_cron pour que l'expiration / auto-confirmation tournent même quand personne n'a l'app ouverte.
+
+### 3.2 Variables d'environnement
+
+Copiez `.env.example` vers `.env.local` :
+
+| Variable | Où la trouver | Remarque |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project settings → API | publique |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project settings → API (anon / publishable) | publique, protégée par RLS |
+| `SUPABASE_SERVICE_ROLE_KEY` | Project settings → API (service_role) | **secrète, serveur uniquement** (Vercel : ne pas cocher « exposer ») |
+| `AUTH_PEPPER` | `openssl rand -hex 32` | **secrète. Ne jamais la changer** une fois des comptes créés |
+
+### 3.3 Lancer en local
+
+```bash
+npm install
+cp .env.example .env.local        # puis remplir
+npm run create-admin -- vous@exemple.com 'un-mot-de-passe-solide' "Votre nom"
+npm run seed                      # données de démo (optionnel)
+npm run dev                       # http://localhost:3000
+```
+
+> La géolocalisation du navigateur exige HTTPS, sauf sur `localhost`. Pour tester sur un téléphone, utilisez le déploiement Vercel (HTTPS).
+
+### 3.4 Déployer sur Vercel
+
+1. Poussez le dépôt sur GitHub puis **Add New → Project** sur Vercel (framework détecté : Next.js).
+2. Ajoutez les 4 variables d'environnement ci-dessus (Production + Preview).
+3. Déployez. Ouvrez l'URL sur un téléphone Android avec Chrome : « Installer l'application » apparaît (manifest + service worker inclus).
+4. Créez le compte admin (`npm run create-admin` en local pointant sur le même projet Supabase) et connectez-vous sur `/admin/login`.
+
+---
+
+## 4. Données de démo
+
+`npm run seed` crée **5 Bodas** et **3 clients** (mélange EN / SW), 3 Bodas en ligne autour du centre-ville, 1 Boda hors ligne, 1 Boda *pending* (pour démontrer la validation), et **14 jours d'historique** (≈110 demandes, dont un couple « suspect » qui enchaîne 12 courses) pour que le dashboard ne soit pas vide.
+
+| Boda (PIN **1234**) | Téléphone | Langue | État |
+|---|---|---|---|
+| Otieno Odhiambo | 0711 000 001 | en | approuvé, en ligne |
+| Nyaboke Moraa | 0711 000 002 | sw | approuvé, en ligne |
+| Saitoti Ole Sanguya | 0711 000 003 | sw | approuvé, en ligne |
+| Barasa Wekesa | 0711 000 004 | en | approuvé, hors ligne |
+| Naserian Lemayian | 0711 000 005 | sw | **pending** |
+
+| Client (sans mot de passe) | Téléphone | Langue |
+|---|---|---|
+| Amina Hassan | 0722 000 001 | sw |
+| Grace Achieng | 0722 000 002 | en |
+| Peter Kiprono | 0722 000 003 | sw |
+
+- Une position de plus de 3 min est masquée aux clients : avant une démo, lancez `npm run seed -- --refresh`, ou laissez tourner **`npm run simulate`** qui fait bouger les Bodas toutes les 10 s.
+- `npm run seed` est rejouable : les utilisateurs existants sont réutilisés, l'historique n'est créé que s'il n'y a aucune course.
+
+---
+
+## 5. Sécurité et confidentialité
+
+- **RLS sur toutes les tables.** Le rôle `authenticated` n'a que `SELECT` ; **toute écriture passe par des fonctions SQL `SECURITY DEFINER`** (`request_ride`, `accept_ride`, `complete_ride`, `update_location`…) qui vérifient le rôle et l'état. `anon` n'a accès à rien. Les fonctions internes (`run_sweep`, `touch_boda_activity`) ne sont exécutables par personne côté API.
+- **Position d'un Boda** : table séparée `boda_locations`, lisible seulement par lui-même, l'admin, **tant qu'il est approuvé + disponible + récent**, et par le client dont la course est acceptée. Dès qu'il passe indisponible ou termine sa course, la ligne est supprimée.
+- **Position du client** : seul le point de prise en charge est enregistré (jamais de suivi continu). Il n'est visible que du Boda **choisi** par le client, puis du Boda qui a accepté. Les numéros de téléphone ne sont échangés **qu'à l'acceptation**.
+- **Aucun accès croisé aux profils** : le nom, la plaque, la photo et le téléphone de l'autre partie sont copiés sur la ligne `rides` (snapshot) ; les profils ne sont lisibles que par leur propriétaire et l'admin.
+- **PIN du Boda** : jamais utilisé tel quel. Le mot de passe Supabase = `HMAC-SHA256(AUTH_PEPPER, "boda:<tel>:<pin>")` calculé **côté serveur** ; 5 essais ratés → verrouillage 15 min ; réponse identique pour « numéro inconnu » et « mauvais PIN ». PIN oublié : l'admin en fixe un nouveau (`/admin/bodas` → *Reset PIN*).
+- **Consentement GPS** explicite (EN/SW) à la première utilisation, enregistré sur le profil, retirable dans les réglages.
+- **Aucune donnée de paiement.**
+- `/admin` est protégé par `proxy.ts` (session + rôle) **et** par RLS (`is_admin()`) sur chaque requête.
+
+### Limites connues (à connaître avant de décider)
+
+1. **Client sans mot de passe (choix du brief)** : connaître le téléphone d'un client suffit pour ouvrir son compte sur un autre appareil. Impact limité (il ne voit les données de personne d'autre), mais c'est de l'usurpation possible. À renforcer (OTP SMS) quand le budget le permet.
+2. **Le GPS web ne tourne pas en arrière-plan.** Quand l'écran s'éteint ou que l'app est fermée, le navigateur suspend le JavaScript. L'app demande un *Wake Lock* (écran maintenu allumé) tant que le Boda est disponible, et un Boda silencieux > 15 min est automatiquement repassé indisponible (> 3 min : masqué des clients). Pour un suivi 100 % fiable il faudra une app native.
+3. **Notifications** : son + vibration + notification système tant que la page est encore vivante. Sans Web Push (non inclus), un téléphone totalement endormi ne sera pas réveillé.
+4. **Tuiles OpenStreetMap** : serveur communautaire gratuit, adapté à ce volume. Si le trafic augmente, passez à un fournisseur de tuiles (MapTiler, Stadia…) en changeant l'URL dans `LeafletMap.tsx`.
+5. **Distances** : à vol d'oiseau (indicatif), pas d'itinéraire routier.
+6. Pas de limitation de débit sur l'inscription des Bodas / clients (à ajouter si abus : Vercel Firewall, Turnstile).
+
+---
+
+## 6. Langues (EN / SW)
+
+- Aucun texte en dur : tout vient de `messages/en.json` et `messages/sw.json`, avec des clés **typées** (une faute de clé fait échouer `tsc`).
+- Les deux fichiers sont embarqués dans l'app : le changement de langue est **instantané, sans rechargement ni reconnexion**.
+- Choix stocké dans un cookie + `localStorage` pour les visiteurs, et dans `profiles.language` une fois connecté (la langue du compte l'emporte sur un nouvel appareil).
+- Les messages d'erreur de la base (`boda_unavailable`, `ride_expired`…) sont des codes traduits sous `errors.*`.
+- Les textes libres (noms, destinations) ne sont pas traduits.
+- `npm run i18n:check` (lancé avant chaque `build`) vérifie que les fichiers ont exactement les mêmes clés et les mêmes `{variables}`.
+
+**Ajouter une 3e langue** (ex. français) : (1) ajouter `fr` dans `src/i18n/config.ts` (+ nom natif, + tag Intl), (2) créer `messages/fr.json`, (3) l'importer dans `src/i18n/messages.ts`, (4) `insert into supported_languages (code, label) values ('fr', 'Français');`. Aucune autre modification.
+
+### ⚠ Traductions swahili « à relire »
+
+**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (302 textes). Priorités de relecture :
+
+| Priorité | Clés | Pourquoi |
+|---|---|---|
+| 1 | `geo.consentBodyBoda`, `geo.consentBodyClient` | Texte de consentement : doit être parfaitement compris |
+| 1 | `boda.available` / `boda.unavailable` (« Niko tayari » / « Siko tayari »), `boda.accept`, `boda.decline`, `boda.arrived`, `boda.complete` | Gros boutons utilisés toute la journée par les Bodas |
+| 2 | `ride.status.*`, `client.onTheWay`, `client.hasArrived`, `client.confirm`, `boda.waitingConfirm` | Statuts de course et confirmation (c'est ce qui déclenche le comptage) |
+| 2 | `errors.*` | Messages d'erreur : courts, non accusateurs |
+| 3 | `admin.*` | Uniquement vu par l'admin |
+
+Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis `npm run i18n:check && npm run i18n:review`.
+
+---
+
+## 7. Tests
+
+| Commande | Ce qu'elle vérifie |
+|---|---|
+| `npm run test:db` | Exécute la **vraie migration** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin (70 assertions) |
+| `npm run typecheck` / `npm run lint` | Types (dont clés de traduction) et ESLint |
+| `npm run i18n:check` | Cohérence EN / SW |
+
+Le parcours complet (inscription Boda → validation admin → disponibilité GPS → demande client → acceptation → arrivée → fin → confirmation + note → dashboard → export CSV → verrouillage de PIN) a été joué dans Chromium (mobile 390 px) contre un faux backend Supabase exécutant cette même migration. **Non testé sur un vrai projet Supabase** : le temps réel (websocket Realtime) et l'envoi réel d'emails/sessions GoTrue. Le code prévoit un polling de secours (10 s) si le temps réel est indisponible. À vérifier lors de votre premier déploiement : deux téléphones, un Boda et un client, une course complète.
+
+---
+
+## 8. Structure
+
+```
+supabase/
+  migrations/…_init.sql    schéma, machine d'états, RLS, RPC, realtime, bucket
+  optional_cron.sql        pg_cron (facultatif)
+  tests/                   test:db (PGlite)
+messages/                  en.json, sw.json
+scripts/                   seed, simulate, create-admin, check-i18n, export-sw-review
+src/
+  proxy.ts                 session + garde /admin, /boda, /client
+  app/                     pages (/, /boda, /client, /admin, /settings) + app/api (auth, export CSV, reset PIN)
+  components/              UI, carte Leaflet, consentement GPS, sélecteur de langue…
+  hooks/                   temps réel (courses, Bodas, position), tracking GPS, wake lock…
+  lib/ i18n/               Supabase (navigateur / serveur / service), helpers
+public/                    manifest, service worker, icônes, page hors-ligne
+docs/SWAHILI_REVIEW.md     traductions à relire
+```
+
+## 9. Pour la phase 2 (rémunération)
+
+Les données nécessaires sont déjà collectées : courses comptées/suspectes par Boda et par jour, prix convenus (`agreed_price_kes`, saisis par le Boda), notes, Bodas actifs. La table `boda_passes` (daily/weekly, montant, référence de paiement) est prête pour un pass journalier/hebdomadaire ; il restera à ajouter la vérification du pass dans `set_availability` / `accept_ride` et l'intégration M-Pesa.
