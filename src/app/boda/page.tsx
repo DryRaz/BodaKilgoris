@@ -8,6 +8,7 @@ import { useRequireRole } from '@/components/auth-provider';
 import { AvailabilityToggle } from '@/components/boda/availability-toggle';
 import { BodaActiveRide } from '@/components/boda/active-ride';
 import { IncomingRequest } from '@/components/boda/incoming-request';
+import { BodaPhotoCard } from '@/components/boda/photo-card';
 import { useGeoConsent } from '@/components/geo-consent';
 import { useToast } from '@/components/toast';
 import { Banner, Button, Card, Stars } from '@/components/ui';
@@ -141,6 +142,8 @@ export default function BodaHomePage() {
         right={<Link href="/settings" aria-label="Settings" className="grid size-11 place-items-center rounded-full text-2xl active:bg-brand-50">⚙️</Link>}
       />
       <Page>
+        {boda && !boda.photo_url && boda.status !== 'suspended' && <BodaPhotoCard nudge />}
+
         {boda?.status === 'pending' && (
           <Card className="space-y-3 text-center">
             <div className="text-5xl" aria-hidden>⏳</div>

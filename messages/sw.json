@@ -89,7 +89,15 @@
     "adminLoginTitle": "Kuingia kwa msimamizi",
     "pinMismatch": "PIN mbili hazifanani.",
     "registered": "Akaunti imefunguliwa. Inasubiri idhini.",
-    "loggingIn": "Inaingia…"
+    "loggingIn": "Inaingia…",
+    "photoRecommended": "Tunapendekeza sana: wateja huwaamini na kuwachagua zaidi Boda wenye picha.",
+    "photoRecommendedTag": "inapendekezwa",
+    "photoGallery": "Chagua kutoka kwenye picha zangu",
+    "photoNudgeTitle": "Unataka kuweka picha yako?",
+    "photoNudgeBody": "Wateja huchagua zaidi Boda wenye picha. Inachukua sekunde chache tu. Unaweza pia kuiweka baadaye.",
+    "photoNudgeAdd": "Weka picha yangu sasa",
+    "photoNudgeSkip": "Endelea bila picha",
+    "draftRestored": "Tumehifadhi ulichoandika tayari."
   },
   "settings": {
     "title": "Mipangilio",
@@ -147,7 +155,12 @@
     "noRating": "Bado hakuna alama",
     "tapAvailable": "Gusa “Niko tayari” ukiwa tayari kupokea safari.",
     "clientCancelled": "{name} amefuta ombi.",
-    "requestExpired": "Ombi moja limeisha muda."
+    "requestExpired": "Ombi moja limeisha muda.",
+    "photoReminderTitle": "Weka picha yako",
+    "photoReminderBody": "Wateja huchagua zaidi Boda wenye picha. Ni bure na inachukua sekunde chache.",
+    "photoSave": "Hifadhi picha yangu",
+    "photoSaved": "Picha imehifadhiwa",
+    "photoYour": "Picha yako"
   },
   "client": {
     "hello": "Habari, {name}",
@@ -341,6 +354,7 @@
     "invalid_location": "Mahali si sahihi.",
     "invalid_price": "Bei si sahihi.",
     "invalid_rating": "Alama lazima ziwe kati ya 1 na 5.",
-    "not_found": "Haikupatikana."
+    "not_found": "Haikupatikana.",
+    "photo_failed": "Picha yako haikuhifadhiwa. Akaunti yako imefunguliwa: unaweza kuweka picha baadaye kwenye skrini kuu."
   }
 }

@@ -1,6 +1,6 @@
 import { getSupabase } from '@/lib/supabase/client';
 
-export interface ApiOk { ok: true; language?: string; session?: { access_token: string; refresh_token: string } | null }
+export interface ApiOk { ok: true; language?: string; photo?: boolean; session?: { access_token: string; refresh_token: string } | null }
 export class ApiError extends Error {
   constructor(public code: string) {
     super(code);

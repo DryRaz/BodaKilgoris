@@ -89,7 +89,15 @@
     "adminLoginTitle": "Admin login",
     "pinMismatch": "The two PINs are not the same.",
     "registered": "Account created. It is waiting for approval.",
-    "loggingIn": "Logging in…"
+    "loggingIn": "Logging in…",
+    "photoRecommended": "Strongly recommended: clients trust Bodas with a photo and choose them more often.",
+    "photoRecommendedTag": "recommended",
+    "photoGallery": "Choose from my photos",
+    "photoNudgeTitle": "Add your photo?",
+    "photoNudgeBody": "Clients choose Bodas with a photo much more often. It takes a few seconds. You can also add it later.",
+    "photoNudgeAdd": "Add my photo now",
+    "photoNudgeSkip": "Continue without a photo",
+    "draftRestored": "We kept what you already typed."
   },
   "settings": {
     "title": "Settings",
@@ -147,7 +155,12 @@
     "noRating": "No rating yet",
     "tapAvailable": "Tap “I am available” when you are ready for rides.",
     "clientCancelled": "{name} cancelled the request.",
-    "requestExpired": "A request expired."
+    "requestExpired": "A request expired.",
+    "photoReminderTitle": "Add your photo",
+    "photoReminderBody": "Clients choose Bodas with a photo much more often. It is free and takes a few seconds.",
+    "photoSave": "Save my photo",
+    "photoSaved": "Photo saved",
+    "photoYour": "Your photo"
   },
   "client": {
     "hello": "Hello, {name}",
@@ -341,6 +354,7 @@
     "invalid_location": "The location is not valid.",
     "invalid_price": "The price is not valid.",
     "invalid_rating": "The rating must be from 1 to 5.",
-    "not_found": "Not found."
+    "not_found": "Not found.",
+    "photo_failed": "Your photo could not be saved. Your account is created: you can add the photo later from your home screen."
   }
 }

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { AppHeader, Loading, Page } from '@/components/app-header';
 import { homeFor, useAuth } from '@/components/auth-provider';
+import { BodaPhotoCard } from '@/components/boda/photo-card';
 import { LanguageSwitcher } from '@/components/language';
 import { InstallPrompt } from '@/components/pwa';
 import { useToast } from '@/components/toast';
@@ -17,7 +18,7 @@ export default function SettingsPage() {
   const tg = useTranslations('geo');
   const tl = useTranslations('language');
   const tc = useTranslations('common');
-  const { profile, loading, refresh, signOut } = useAuth();
+  const { profile, boda, loading, refresh, signOut } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -49,6 +50,8 @@ export default function SettingsPage() {
               <p className="font-semibold">{profile.name}</p>
               {profile.phone && <p className="text-muted">{formatPhone(profile.phone)}</p>}
             </Card>
+
+            {profile.role === 'boda' && boda?.photo_url && <BodaPhotoCard />}
 
             {profile.role !== 'admin' && (
               <Card className="space-y-3">

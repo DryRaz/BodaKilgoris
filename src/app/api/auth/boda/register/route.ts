@@ -4,17 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { bodaPassword, emailForPhone, jsonError, pickLanguage, sessionTokens } from '@/lib/server/auth';
 import { logError, maskPhone } from '@/lib/server/log';
-
-const MAX_PHOTO_BYTES = 1_000_000; // bucket limit is 1 MB; the browser compresses to ~150 KB first
-
-function imageKind(bytes: Uint8Array): { ext: string; mime: string } | null {
-  if (bytes[0] === 0xff && bytes[1] === 0xd8) return { ext: 'jpg', mime: 'image/jpeg' };
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return { ext: 'png', mime: 'image/png' };
-  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 && bytes[8] === 0x57) {
-    return { ext: 'webp', mime: 'image/webp' };
-  }
-  return null;
-}
+import { saveBodaPhoto } from '@/lib/server/photo';
 
 export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
@@ -31,11 +21,6 @@ export async function POST(request: Request) {
   if (!phone) return jsonError('invalid_phone');
   if (!plate) return jsonError('invalid_plate');
   if (!isValidPin(pin)) return jsonError('invalid_pin');
-  if (!(photo instanceof File) || photo.size === 0) return jsonError('photo_required');
-  if (photo.size > MAX_PHOTO_BYTES) return jsonError('photo_too_large');
-  const bytes = new Uint8Array(await photo.arrayBuffer());
-  const kind = imageKind(bytes);
-  if (!kind) return jsonError('photo_required');
 
   const admin = createSupabaseAdminClient();
   const ctx = { route: 'boda/register', phone: maskPhone(phone) };
@@ -69,16 +54,10 @@ export async function POST(request: Request) {
   if (bodaErr) logError('boda/register:insert-boda-profile', bodaErr, ctx);
   if (bodaErr) return rollback(bodaErr.code === '23505' ? 'plate_in_use' : 'generic', bodaErr.code === '23505' ? 409 : 500);
 
-  const path = `${userId}.${kind.ext}`;
-  const { error: uploadErr } = await admin.storage
-    .from('boda-photos')
-    .upload(path, bytes, { contentType: kind.mime, upsert: true, cacheControl: '31536000' });
-  if (uploadErr) {
-    logError('boda/register:photo-upload', uploadErr, ctx);
-    return rollback('generic');
-  }
-  const { data: pub } = admin.storage.from('boda-photos').getPublicUrl(path);
-  await admin.from('boda_profiles').update({ photo_url: pub.publicUrl }).eq('user_id', userId);
+  // The photo is strongly recommended but must never block the account: a failure here is
+  // logged and reported to the app (photo: false) so it can offer to retry later.
+  const photoUrl = await saveBodaPhoto(admin, userId, photo, ctx);
+  if (photoUrl) await admin.from('boda_profiles').update({ photo_url: photoUrl }).eq('user_id', userId);
 
   const supabase = await createSupabaseServerClient();
   const { data: signedIn, error: signInErr } = await supabase.auth.signInWithPassword({
@@ -90,5 +69,9 @@ export async function POST(request: Request) {
     return jsonError('generic', 500);
   }
 
-  return NextResponse.json({ ok: true, session: sessionTokens(signedIn.session) });
+  return NextResponse.json({
+    ok: true,
+    photo: !!photoUrl,
+    session: sessionTokens(signedIn.session),
+  });
 }
