@@ -71,8 +71,6 @@
     "plate": "Nambari ya pikipiki",
     "plateHint": "Mfano: KMFA 123A",
     "photo": "Picha yako",
-    "photoTake": "Piga au chagua picha",
-    "photoChange": "Badilisha picha",
     "photoHint": "Picha safi ya uso wako. Wateja wataiona.",
     "login": "Ingia",
     "register": "Fungua akaunti yangu",
@@ -89,7 +87,20 @@
     "adminLoginTitle": "Kuingia kwa msimamizi",
     "pinMismatch": "PIN mbili hazifanani.",
     "registered": "Akaunti imefunguliwa. Inasubiri idhini.",
-    "loggingIn": "Inaingia…"
+    "loggingIn": "Inaingia…",
+    "photoCamera": "Piga picha",
+    "photoRetake": "Piga picha nyingine",
+    "photoGallery": "Chagua kwenye picha zako",
+    "photoProcessing": "Tunaandaa picha yako…",
+    "photoUploading": "Tunatuma picha yako…",
+    "photoSaved": "Picha imehifadhiwa ✓",
+    "photoRetry": "Jaribu kutuma tena",
+    "photoLater": "Weka picha baadaye",
+    "photoContinue": "Endelea",
+    "photoStepTitle": "Weka picha yako",
+    "accountCreated": "Akaunti yako imeundwa ✓ Unaweza kuweka picha yako sasa, au baadaye kwenye ukurasa wa mwanzo.",
+    "photoRestarted": "Programu ilianza upya wakati kamera ilikuwa wazi. Akaunti yako iko salama. Tafadhali jaribu kupiga picha tena.",
+    "draftRestored": "Tumehifadhi ulichoandika. Tafadhali weka PIN yako tena."
   },
   "settings": {
     "title": "Mipangilio",
@@ -147,7 +158,9 @@
     "noRating": "Bado hakuna alama",
     "tapAvailable": "Gusa “Niko tayari” ukiwa tayari kupokea safari.",
     "clientCancelled": "{name} amefuta ombi.",
-    "requestExpired": "Ombi moja limeisha muda."
+    "requestExpired": "Ombi moja limeisha muda.",
+    "addPhotoTitle": "Weka picha yako",
+    "addPhotoBody": "Wateja wanapenda kuona nani atawabeba. Pia inamsaidia msimamizi kukuidhinisha."
   },
   "client": {
     "hello": "Habari, {name}",
@@ -341,6 +354,8 @@
     "invalid_location": "Mahali si sahihi.",
     "invalid_price": "Bei si sahihi.",
     "invalid_rating": "Alama lazima ziwe kati ya 1 na 5.",
-    "not_found": "Haikupatikana."
+    "not_found": "Haikupatikana.",
+    "photo_unreadable": "Hatukuweza kusoma picha hii. Tafadhali piga au chagua nyingine.",
+    "photo_upload_failed": "Picha haikuweza kuhifadhiwa. Tafadhali jaribu tena."
   }
 }

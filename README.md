@@ -8,7 +8,7 @@ fiable** pour décider ensuite du modèle de rémunération. Le dashboard admin 
 *« combien de courses réelles passent par l'app chaque jour ? »*
 
 - **Stack** : Next.js 16 (App Router) · TypeScript · Tailwind 4 · Supabase (Postgres, Auth, Realtime, Storage) · Leaflet + OpenStreetMap · next-intl · Vercel
-- **Pensé pour** : connexions lentes et Android bas de gamme (polices système, photo compressée à ~100 Ko, aucun SDK de carte propriétaire, polling de secours en plus du temps réel)
+- **Pensé pour** : connexions lentes et Android bas de gamme (polices système, photo réduite à 800 px / < 200 Ko avant tout affichage, aucun SDK de carte propriétaire, polling de secours en plus du temps réel)
 
 ---
 
@@ -17,7 +17,7 @@ fiable** pour décider ensuite du modèle de rémunération. Le dashboard admin 
 | Interface | Écrans |
 |---|---|
 | **Premier lancement** | Choix de langue (2 gros boutons) avant toute inscription |
-| **Boda** (`/boda`) | Inscription (nom, téléphone, plaque, photo, PIN 4 chiffres) · statut *pending* tant que l'admin n'a pas validé · gros bouton disponible / indisponible · GPS toutes les ~12 s uniquement si disponible · demandes entrantes en temps réel avec mini-carte, accepter/refuser, expiration à 2 min · « Je suis arrivé » → « Course terminée » (+ prix optionnel) · indisponible automatiquement pendant une course |
+| **Boda** (`/boda`) | Inscription en 2 étapes (1. nom, téléphone, plaque, PIN 4 chiffres → compte créé ; 2. photo, *optionnelle*, ajoutable plus tard depuis l'accueil ou les réglages) · statut *pending* tant que l'admin n'a pas validé · gros bouton disponible / indisponible · GPS toutes les ~12 s uniquement si disponible · demandes entrantes en temps réel avec mini-carte, accepter/refuser, expiration à 2 min · « Je suis arrivé » → « Course terminée » (+ prix optionnel) · indisponible automatiquement pendant une course |
 | **Client** (`/client`) | Nom + téléphone, session persistante · carte avec tous les Bodas disponibles **avec leur nom** · liste triée par distance avec note moyenne · le client **choisit** son Boda · point de prise en charge par GPS ou épingle · destination en texte libre · attente, suivi du Boda sur la carte, confirmation + note 1–5 (optionnelle) |
 | **Admin** (`/admin`) | Validation / suspension des Bodas · compteurs jour / semaine / mois · stats par Boda · taux et temps moyen d'acceptation · Bodas actifs par jour · courses suspectes · carte en direct · export CSV · réinitialisation du PIN d'un Boda |
 | **Réglages** (`/settings`) | Langue, consentement GPS (retirable), déconnexion, installation PWA |
@@ -184,6 +184,25 @@ Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis 
 | `npm run i18n:check` | Cohérence EN / SW |
 
 Le parcours complet (inscription Boda → validation admin → disponibilité GPS → demande client → acceptation → arrivée → fin → confirmation + note → dashboard → export CSV → verrouillage de PIN) a été joué dans Chromium (mobile 390 px) contre un faux backend Supabase exécutant cette même migration. **Non testé sur un vrai projet Supabase** : le temps réel (websocket Realtime) et l'envoi réel d'emails/sessions GoTrue. Le code prévoit un polling de secours (10 s) si le temps réel est indisponible. À vérifier lors de votre premier déploiement : deux téléphones, un Boda et un client, une course complète.
+
+---
+
+## 7bis. Photo, caméra et téléphones Android à faible RAM
+
+Sur un téléphone bas de gamme, Android peut **tuer la page** pendant que l'application caméra est ouverte : au retour, l'app « redémarre ». Ce qui est en place pour que cela ne coûte plus rien au Boda :
+
+| Mesure | Où |
+|---|---|
+| Caméra **native** via `<input type="file" accept="image/*" capture="user">` + bouton « Choisir dans la galerie ». Aucun `getUserMedia`, aucun flux vidéo dans la page. | `src/components/photo-picker.tsx` |
+| Compression **avant** affichage/envoi : 800 px max, JPEG ~0,7 (qualité abaissée puis taille réduite si > 200 Ko), bitmap/canvas libérés, un seul `createObjectURL` (de la petite image) révoqué au remplacement/démontage. | `src/lib/image-compress.ts` |
+| Inscription **sans photo** (compte créé d'abord), photo = étape 2 optionnelle (« Ajouter une photo plus tard »). Un plantage ne fait jamais perdre le compte. | `src/app/boda/register/page.tsx`, `api/auth/boda/register` |
+| Brouillon (nom, téléphone, plaque, langue, étape) en `localStorage`, écrit à chaque frappe et **avant** l'ouverture de la caméra. **Le PIN n'est jamais stocké.** Restauré automatiquement ; la session (cookies) survit au rechargement donc on reprend à l'étape 2. | `src/lib/draft.ts` |
+| Envoi vers **Supabase Storage** (bucket `boda-photos`, jamais de base64 en base) par `POST /api/boda/photo` ; 3 essais automatiques (1 s, 2 s) + bouton « Réessayer » qui garde la photo en mémoire ; l'ancienne photo est supprimée. | `src/lib/photo-upload.ts`, `src/app/api/boda/photo/route.ts` |
+| Journal d'erreurs : console (visible via `chrome://inspect`) **et** serveur (`POST /api/log` → logs Vercel, chercher `client_event`). Événements : `photo.compressed`, `photo.compress_failed`, `photo.upload_rejected`, `photo.upload_failed`, `photo.upload_gave_up`, `photo.page_restarted_during_capture`, `app.restarted` (page rechargée/écartée par Chrome), `auth.profile_load_failed`. Jamais de nom/téléphone/PIN. | `src/lib/clientlog.ts`, `src/components/diagnostics.tsx` |
+
+**Rechargements forcés (audit)** : aucun `location.reload`, `router.refresh` ni `window.location` dans l'app (seul `offline.html` a un bouton « Réessayer » manuel). Corrigés : `sw.js` n'appelle plus `skipWaiting()`/`clients.claim()` (une mise à jour ne prend plus le contrôle d'une page ouverte) ; `AuthProvider` ne traite plus une erreur réseau comme « déconnecté » (avant : retour sur un réseau faible → `profile = null` → redirection vers la page de connexion) et ignore les `SIGNED_IN` répétés pour l'utilisateur déjà chargé ; l'abonnement Realtime de `/boda` dépend de l'id (string) et non de l'objet `user` (avant : se recréait à chaque retour au premier plan).
+
+**Tester sur un vrai téléphone** : Android en USB, débogage USB activé, ouvrir `chrome://inspect/#devices` sur le PC, « inspect » sur l'onglet de l'app, onglets *Console* (messages `[boda] …`) et *Application → Local Storage* (`boda.registerDraft.v1`). Pour simuler la mémoire faible : DevTools → Performance → CPU « 6× slowdown », et `chrome://discards` → *Urgent Discard* sur l'onglet pour provoquer le rechargement.
 
 ---
 

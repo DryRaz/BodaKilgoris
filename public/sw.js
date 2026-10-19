@@ -3,6 +3,9 @@
  * - caches the hashed build assets (cache-first) and map tiles you already viewed
  * - NEVER caches API calls, Supabase traffic or HTML pages (always fresh, auth-safe)
  */
+/* No skipWaiting() / clients.claim() on purpose: a new worker used to take over open pages in the middle
+ * of a session (and could drop the caches a running page still needs). It now waits until the app is
+ * closed, so an update can never disturb a Boda who is, for instance, taking a photo. */
 const VERSION = 'v1';
 const STATIC_CACHE = `boda-static-${VERSION}`;
 const TILE_CACHE = `boda-tiles-${VERSION}`;
@@ -11,7 +14,7 @@ const MAX_TILES = 300;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, '/icons/icon-192.png'])).then(() => self.skipWaiting()),
+    caches.open(STATIC_CACHE).then((c) => c.addAll([OFFLINE_URL, '/icons/icon-192.png'])),
   );
 });
 
@@ -19,8 +22,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => ![STATIC_CACHE, TILE_CACHE].includes(k)).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim()),
+      .then((keys) => Promise.all(keys.filter((k) => ![STATIC_CACHE, TILE_CACHE].includes(k)).map((k) => caches.delete(k)))),
   );
 });
 

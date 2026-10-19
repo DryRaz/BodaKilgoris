@@ -22,7 +22,7 @@ How to review: edit `messages/sw.json` directly (keep the `{placeholders}` exact
 | Cash | pesa taslimu | cash (many people just say "cash") |
 | Plate number | Nambari ya pikipiki | Namba ya pikipiki |
 
-Total strings: 302
+Total strings: 317
 
 ## common
 
@@ -116,8 +116,6 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `auth.plate` | Motorbike plate number | Nambari ya pikipiki |
 | `auth.plateHint` | Example: KMFA 123A | Mfano: KMFA 123A |
 | `auth.photo` | Your photo | Picha yako |
-| `auth.photoTake` | Take or choose a photo | Piga au chagua picha |
-| `auth.photoChange` | Change photo | Badilisha picha |
 | `auth.photoHint` | A clear photo of your face. Clients see it. | Picha safi ya uso wako. Wateja wataiona. |
 | `auth.login` | Log in | Ingia |
 | `auth.register` | Create my account | Fungua akaunti yangu |
@@ -135,6 +133,19 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `auth.pinMismatch` | The two PINs are not the same. | PIN mbili hazifanani. |
 | `auth.registered` | Account created. It is waiting for approval. | Akaunti imefunguliwa. Inasubiri idhini. |
 | `auth.loggingIn` | Logging in… | Inaingia… |
+| `auth.photoCamera` | Take a photo | Piga picha |
+| `auth.photoRetake` | Take another photo | Piga picha nyingine |
+| `auth.photoGallery` | Choose from gallery | Chagua kwenye picha zako |
+| `auth.photoProcessing` | Preparing your photo… | Tunaandaa picha yako… |
+| `auth.photoUploading` | Sending your photo… | Tunatuma picha yako… |
+| `auth.photoSaved` | Photo saved ✓ | Picha imehifadhiwa ✓ |
+| `auth.photoRetry` | Try sending again | Jaribu kutuma tena |
+| `auth.photoLater` | Add a photo later | Weka picha baadaye |
+| `auth.photoContinue` | Continue | Endelea |
+| `auth.photoStepTitle` | Add your photo | Weka picha yako |
+| `auth.accountCreated` | Your account is created ✓ You can add your photo now, or later from the home page. | Akaunti yako imeundwa ✓ Unaweza kuweka picha yako sasa, au baadaye kwenye ukurasa wa mwanzo. |
+| `auth.photoRestarted` | The app restarted while the camera was open. Your account is safe. Please try the photo again. | Programu ilianza upya wakati kamera ilikuwa wazi. Akaunti yako iko salama. Tafadhali jaribu kupiga picha tena. |
+| `auth.draftRestored` | We kept what you typed. Please enter your PIN again. | Tumehifadhi ulichoandika. Tafadhali weka PIN yako tena. |
 
 ## settings
 
@@ -199,6 +210,8 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `boda.tapAvailable` | Tap “I am available” when you are ready for rides. | Gusa “Niko tayari” ukiwa tayari kupokea safari. |
 | `boda.clientCancelled` | {name} cancelled the request. | {name} amefuta ombi. |
 | `boda.requestExpired` | A request expired. | Ombi moja limeisha muda. |
+| `boda.addPhotoTitle` | Add your photo | Weka picha yako |
+| `boda.addPhotoBody` | Clients like to see who they ride with. It also helps the admin approve you. | Wateja wanapenda kuona nani atawabeba. Pia inamsaidia msimamizi kukuidhinisha. |
 
 ## client
 
@@ -398,4 +411,6 @@ _Shown to people when something fails: must be short and not blaming._
 | `errors.invalid_price` | The price is not valid. | Bei si sahihi. |
 | `errors.invalid_rating` | The rating must be from 1 to 5. | Alama lazima ziwe kati ya 1 na 5. |
 | `errors.not_found` | Not found. | Haikupatikana. |
+| `errors.photo_unreadable` | We could not read this photo. Please take or choose another one. | Hatukuweza kusoma picha hii. Tafadhali piga au chagua nyingine. |
+| `errors.photo_upload_failed` | The photo could not be saved. Please try again. | Picha haikuweza kuhifadhiwa. Tafadhali jaribu tena. |
 

@@ -71,8 +71,6 @@
     "plate": "Motorbike plate number",
     "plateHint": "Example: KMFA 123A",
     "photo": "Your photo",
-    "photoTake": "Take or choose a photo",
-    "photoChange": "Change photo",
     "photoHint": "A clear photo of your face. Clients see it.",
     "login": "Log in",
     "register": "Create my account",
@@ -89,7 +87,20 @@
     "adminLoginTitle": "Admin login",
     "pinMismatch": "The two PINs are not the same.",
     "registered": "Account created. It is waiting for approval.",
-    "loggingIn": "Logging in…"
+    "loggingIn": "Logging in…",
+    "photoCamera": "Take a photo",
+    "photoRetake": "Take another photo",
+    "photoGallery": "Choose from gallery",
+    "photoProcessing": "Preparing your photo…",
+    "photoUploading": "Sending your photo…",
+    "photoSaved": "Photo saved ✓",
+    "photoRetry": "Try sending again",
+    "photoLater": "Add a photo later",
+    "photoContinue": "Continue",
+    "photoStepTitle": "Add your photo",
+    "accountCreated": "Your account is created ✓ You can add your photo now, or later from the home page.",
+    "photoRestarted": "The app restarted while the camera was open. Your account is safe. Please try the photo again.",
+    "draftRestored": "We kept what you typed. Please enter your PIN again."
   },
   "settings": {
     "title": "Settings",
@@ -147,7 +158,9 @@
     "noRating": "No rating yet",
     "tapAvailable": "Tap “I am available” when you are ready for rides.",
     "clientCancelled": "{name} cancelled the request.",
-    "requestExpired": "A request expired."
+    "requestExpired": "A request expired.",
+    "addPhotoTitle": "Add your photo",
+    "addPhotoBody": "Clients like to see who they ride with. It also helps the admin approve you."
   },
   "client": {
     "hello": "Hello, {name}",
@@ -341,6 +354,8 @@
     "invalid_location": "The location is not valid.",
     "invalid_price": "The price is not valid.",
     "invalid_rating": "The rating must be from 1 to 5.",
-    "not_found": "Not found."
+    "not_found": "Not found.",
+    "photo_unreadable": "We could not read this photo. Please take or choose another one.",
+    "photo_upload_failed": "The photo could not be saved. Please try again."
   }
 }

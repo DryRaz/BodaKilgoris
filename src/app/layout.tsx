@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { cookies } from 'next/headers';
 import { AuthProvider } from '@/components/auth-provider';
+import { ReloadDiagnostics } from '@/components/diagnostics';
 import { LanguageGate } from '@/components/language';
 import { OfflineBanner, ServiceWorkerRegister } from '@/components/pwa';
 import { ToastProvider } from '@/components/toast';
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </ToastProvider>
         </I18nProvider>
         <ServiceWorkerRegister />
+        <ReloadDiagnostics />
       </body>
     </html>
   );
