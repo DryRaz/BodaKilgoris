@@ -11,6 +11,7 @@ import { useFormat } from '@/hooks/useFormat';
 import { usePlaces } from '@/hooks/usePlaces';
 import { KILGORIS_CENTER } from '@/lib/constants';
 import { distanceMeters, type LatLng } from '@/lib/geo';
+import { draftToItems, type DraftLine } from '@/lib/shopping';
 import { GeoError, getPosition } from '@/lib/geolocation';
 import { getSupabase } from '@/lib/supabase/client';
 import type { AvailableBoda, Place } from '@/lib/types';
@@ -23,10 +24,25 @@ type GpsIssue = 'denied' | 'unavailable' | 'timeout' | 'unsupported' | 'imprecis
 /** A GPS fix worse than this is shown to the client as "check your pin" (the Boda must find them). */
 const GPS_IMPRECISE_METERS = 100;
 
+/** Shopping-list mode: the same Bodas, map and GPS/pin logic, but the request carries the list instead of a destination. */
+export interface ShoppingRequest {
+  lines: DraftLine[];
+  budget: string;
+  note: string;
+  landmark: string;
+  onLandmark: (value: string) => void;
+}
+
 export function BodasBrowser({
-  requestConsent, onRequested,
-}: { requestConsent: () => Promise<boolean>; onRequested: () => void }) {
+  requestConsent, onRequested, shopping,
+}: {
+  requestConsent: () => Promise<boolean>;
+  /** receives the new order's id when a shopping list was sent */
+  onRequested: (rideId?: string) => void;
+  shopping?: ShoppingRequest;
+}) {
   const t = useTranslations('client');
+  const ts = useTranslations('shopping');
   const tg = useTranslations('geo');
   const te = useErrorMessage();
   const toast = useToast();
@@ -108,22 +124,30 @@ export function BodasBrowser({
 
   async function request(b: AvailableBoda) {
     if (!pickup) {
-      toast.show(t('tapMap'), 'info');
+      toast.show(shopping ? ts('tapMapDelivery') : t('tapMap'), 'info');
       return;
     }
     setRequesting(b.id);
-    // Only the pick-up point is required. Everything about the destination may be empty.
-    const { error } = await getSupabase().rpc('request_ride', {
-      p_boda_id: b.id, p_lat: pickup.lat, p_lng: pickup.lng,
-      p_destination: destination.trim() || null,
-      p_dest_lat: destPoint?.lat ?? null, p_dest_lng: destPoint?.lng ?? null,
-      p_pickup_note: pickupNote.trim() || null,
-    });
+    // Only the pick-up / delivery point is required. Everything about the destination may be empty.
+    const { data, error } = shopping
+      ? await getSupabase().rpc('request_shopping', {
+          p_boda_id: b.id, p_lat: pickup.lat, p_lng: pickup.lng,
+          p_items: draftToItems(shopping.lines),
+          p_budget: shopping.budget.trim() ? Number(shopping.budget) : null,
+          p_note: shopping.note.trim() || null,
+          p_landmark: shopping.landmark.trim() || null,
+        })
+      : await getSupabase().rpc('request_ride', {
+          p_boda_id: b.id, p_lat: pickup.lat, p_lng: pickup.lng,
+          p_destination: destination.trim() || null,
+          p_dest_lat: destPoint?.lat ?? null, p_dest_lng: destPoint?.lng ?? null,
+          p_pickup_note: pickupNote.trim() || null,
+        });
     if (error) {
       toast.show(te(error), 'error');
       void reload();
     } else {
-      onRequested();
+      onRequested((data as { id?: string } | null)?.id);
     }
     setRequesting(null);
   }
@@ -171,7 +195,7 @@ export function BodasBrowser({
         )}
         <div className="flex items-center justify-between gap-3">
           <p className="text-sm text-muted">
-            {pickup ? `📍 ${pickup.source === 'gps' ? t('pickupGps') : t('pickupPin')}` : t('tapMap')}
+            {pickup ? `📍 ${pickup.source === 'gps' ? t('pickupGps') : t('pickupPin')}` : shopping ? ts('tapMapDelivery') : t('tapMap')}
           </p>
           <Button variant="secondary" loading={locating} onClick={() => void locate(true)} className="shrink-0">
             {locating ? t('locating') : t('useMyLocation')}
@@ -180,22 +204,24 @@ export function BodasBrowser({
       </div>
 
       {gpsIssue && pickup?.source !== 'pin' && (
-        <Banner kind="warn">{gpsIssue === 'imprecise' ? t('gpsImprecise', { meters: gpsMeters }) : t('gpsFallback')}</Banner>
+        <Banner kind="warn">{gpsIssue === 'imprecise' ? t('gpsImprecise', { meters: gpsMeters }) : shopping ? ts('gpsFallbackDelivery') : t('gpsFallback')}</Banner>
       )}
 
-      <Field label={t('pickupNoteLabel')} hint={t('pickupNoteHint')}>
+      <Field label={shopping ? ts('landmarkLabel') : t('pickupNoteLabel')} hint={shopping ? ts('landmarkHint') : t('pickupNoteHint')}>
         {(id) => (
           <TextInput
             id={id}
-            value={pickupNote}
-            onChange={(e) => setPickupNote(e.target.value)}
-            placeholder={t('pickupNotePlaceholder')}
+            value={shopping ? shopping.landmark : pickupNote}
+            onChange={(e) => (shopping ? shopping.onLandmark(e.target.value) : setPickupNote(e.target.value))}
+            placeholder={shopping ? ts('landmarkPlaceholder') : t('pickupNotePlaceholder')}
             maxLength={200}
             autoComplete="off"
           />
         )}
       </Field>
 
+      {!shopping && (
+        <>
       {/* Destination: free text, quick places, optional pin. Nothing here ever blocks a request. */}
       <div className="space-y-2">
         <Field label={t('destinationLabel')} hint={t('destinationHint')}>
@@ -249,6 +275,10 @@ export function BodasBrowser({
           )}
         </div>
       </div>
+        </>
+      )}
+
+      {shopping && <Banner kind="warn">{ts('payNotice')}</Banner>}
 
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-extrabold">{t('bodasNow')} ({list.length})</h2>
@@ -279,7 +309,7 @@ export function BodasBrowser({
                 </span>
               </button>
               <Button loading={requesting === boda.id} disabled={requesting !== null} onClick={() => void request(boda)} className="w-full">
-                {t('request')}
+                {shopping ? ts('sendList') : t('request')}
               </Button>
             </Card>
           </li>

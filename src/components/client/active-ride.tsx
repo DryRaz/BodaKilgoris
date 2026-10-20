@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
+import { ShoppingOrderPanel } from '@/components/client/shopping-order-panel';
 import { Map } from '@/components/map/Map';
 import { useToast } from '@/components/toast';
 import { Banner, Button, Card, Spinner } from '@/components/ui';
@@ -16,6 +17,7 @@ import type { Ride } from '@/lib/types';
 
 export function ClientActiveRide({ ride, onChanged }: { ride: Ride; onChanged: () => void }) {
   const t = useTranslations('client');
+  const ts = useTranslations('shopping');
   const tc = useTranslations('common');
   const te = useErrorMessage();
   const toast = useToast();
@@ -26,6 +28,7 @@ export function ClientActiveRide({ ride, onChanged }: { ride: Ride; onChanged: (
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const waiting = ride.status === 'requested';
+  const shopping = ride.type === 'shopping';
   const remaining = Math.max(0, Math.round((Date.parse(ride.expires_at) - now) / 1000));
   const pickup = { lat: ride.pickup_lat, lng: ride.pickup_lng };
   const dest = destinationPoint(ride);
@@ -63,9 +66,11 @@ export function ClientActiveRide({ ride, onChanged }: { ride: Ride; onChanged: (
         ) : (
           <>
             <h2 className="text-2xl font-extrabold">
-              {ride.status === 'arrived' ? t('hasArrived', { name: ride.boda_name }) : t('onTheWay', { name: ride.boda_name })}
+              {shopping
+                ? ts(ride.status === 'shopping' ? 'order.shopping' : ride.status === 'purchased' ? 'order.purchased' : ride.status === 'delivering' ? 'order.delivering' : 'order.accepted', { name: ride.boda_name })
+                : ride.status === 'arrived' ? t('hasArrived', { name: ride.boda_name }) : t('onTheWay', { name: ride.boda_name })}
             </h2>
-            {ride.status === 'accepted' && eta !== null && <p className="text-lg font-semibold text-brand-700">{t('eta', { minutes: eta })}</p>}
+            {(ride.status === 'accepted' || ride.status === 'delivering') && eta !== null && <p className="text-lg font-semibold text-brand-700">{t('eta', { minutes: eta })}</p>}
             <div className="flex items-center gap-3">
               <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-100 text-2xl">
                 {ride.boda_photo_url ? (
@@ -88,6 +93,8 @@ export function ClientActiveRide({ ride, onChanged }: { ride: Ride; onChanged: (
           </>
         )}
       </Card>
+
+      {shopping && <ShoppingOrderPanel ride={ride} />}
 
       <Map
         className="h-[40dvh] min-h-60 w-full"

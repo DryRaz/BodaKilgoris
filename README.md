@@ -19,10 +19,12 @@ fiable** pour décider ensuite du modèle de rémunération. Le dashboard admin 
 | **Premier lancement** | Choix de langue (2 gros boutons) avant toute inscription |
 | **Boda** (`/boda`) | Inscription en 2 étapes (1. nom, téléphone, plaque, PIN 4 chiffres → compte créé ; 2. photo, *optionnelle*, ajoutable plus tard depuis l'accueil ou les réglages) · statut *pending* tant que l'admin n'a pas validé · gros bouton disponible / indisponible · GPS toutes les ~12 s uniquement si disponible · demandes entrantes en temps réel avec mini-carte (destination affichée seulement si elle existe, sinon « Destination à préciser avec le client »), accepter/refuser, expiration à 2 min · « Je suis arrivé » → « Course terminée » (+ prix optionnel) · indisponible automatiquement pendant une course |
 | **Client** (`/client`) | Nom + téléphone, session persistante · carte avec tous les Bodas disponibles **avec leur nom** · liste triée par distance avec note moyenne · le client **choisit** son Boda · point de prise en charge **obligatoire** : GPS d'abord, épingle manuelle si le GPS est refusé/imprécis (> 100 m), + « repère de prise en charge » facultatif · destination **entièrement facultative** : texte libre (repère, quartier), lieux fréquents en puces, bouton « Placer sur la carte » facultatif · attente, suivi du Boda sur la carte, confirmation + note 1–5 (optionnelle) |
-| **Admin** (`/admin`) | Validation / suspension des Bodas · compteurs jour / semaine / mois · stats par Boda · taux et temps moyen d'acceptation · Bodas actifs par jour · courses suspectes · carte en direct · **lieux fréquents** (`/admin/places` : ajout, édition, masquage) · export CSV · réinitialisation du PIN d'un Boda |
+| **Client – Shopping list** | Écran d'accueil à deux gros boutons (« Ride » / « Shopping list ») · catalogue d'articles cochables par catégorie avec recherche et quantité +/- · « Autre article » en texte libre · budget maximum et note facultatifs · récapitulatif éditable · lieu de livraison (GPS, sinon épingle, + repère facultatif) · choix du Boda (même carte et même liste que les rides) · liste **conservée** (localStorage) en cas de rechargement, refus, expiration · suivi en direct : statuts, articles achetés / introuvables / remplacés, **total des articles dès que le Boda le saisit** · confirmation de livraison avec les factures en évidence, « Signaler un problème » (4 motifs + texte libre), note facultative |
+| **Boda – Shopping** | Demande entrante avec badge « Shopping », nombre d'articles, liste complète, budget, lieu de livraison · après acceptation : téléphone du client, boutons Appeler / WhatsApp (uniquement pendant la commande) · bandeau chaud « Gardez TOUTES les factures… » de l'acceptation à « Livré » · articles « acheté / introuvable (+ remplacement) / sans reçu » · 5 étapes à boutons, avec cases **bloquantes** « J'ai gardé tous les reçus » (Courses faites) et « J'ai présenté les reçus » (Livré), total des articles et frais de livraison obligatoires · aucune photo de reçu |
+| **Admin** (`/admin`) | Validation / suspension des Bodas · compteurs jour / semaine / mois · stats par Boda · taux et temps moyen d'acceptation · Bodas actifs par jour · courses suspectes · carte en direct · **lieux fréquents** (`/admin/places` : ajout, édition, masquage) · **catalogue d'articles** (`/admin/catalog` : ajout, édition, masquage, ordre, noms EN/SW, unité) · **Shopping** (`/admin/shopping` : compteurs séparés des rides, valeur moyenne, frais moyens, taux et motifs de problèmes, articles les plus demandés, articles libres les plus fréquents, indicateurs reçus par Boda, liste des problèmes avec détail) · export CSV · réinitialisation du PIN d'un Boda |
 | **Réglages** (`/settings`) | Langue, consentement GPS (retirable), déconnexion, installation PWA |
 
-Hors périmètre (volontairement absent) : M-Pesa, commissions, abonnements, calcul de prix, chat.
+Hors périmètre (volontairement absent) : M-Pesa, commissions, abonnements, calcul de prix, chat, **aucun paiement dans l'app** (le Boda avance l'argent des courses, le client le rembourse à la livraison, hors app), pas de prix de catalogue, pas de photo de reçus.
 Seul le **schéma** d'un pass journalier/hebdomadaire est prévu (table `boda_passes`, non utilisée).
 
 ---
@@ -67,7 +69,9 @@ Les jours sont calculés en fuseau **Africa/Nairobi**.
 1. Créez un projet sur [supabase.com](https://supabase.com) (région la plus proche du Kenya).
 2. **SQL Editor** → collez et exécutez, **dans l'ordre**, les fichiers de `supabase/migrations/` :
    1. **`20261016000000_init.sql`** (tables, RLS, fonctions, realtime, bucket photos) ;
-   2. **`20261020000000_optional_destination_places.sql`** (destination facultative + coordonnées facultatives, repère de prise en charge, table `places` **vide**, `request_ride` mise à jour). Idempotent, sans effet sur les courses existantes : sur un projet déjà en service, exécutez seulement celui-ci.
+   2. **`20261020000000_optional_destination_places.sql`** (destination facultative + coordonnées facultatives, repère de prise en charge, table `places` **vide**, `request_ride` mise à jour). Idempotent, sans effet sur les courses existantes ;
+   3. **`20261021000000_shopping_status_values.sql`**, **puis, dans une exécution séparée**, **`20261021000100_shopping.sql`** (« Shopping list » : statuts, `catalog_items` + catalogue de départ, `ride_items`, `request_shopping`, étapes du Boda, signalement, fonctions admin). Les deux fichiers doivent être lancés l'un après l'autre, pas ensemble (une nouvelle valeur d'enum ne peut pas être utilisée dans la transaction qui l'ajoute). Idempotents, sans effet sur les courses existantes (elles deviennent `type = 'ride'`).
+   Sur un projet déjà en service, exécutez seulement les fichiers qui manquent.
 3. **Authentication → Providers → Email** : laissez le fournisseur Email **activé**, mais :
    - désactivez **« Allow new users to sign up »** (les comptes sont créés uniquement par le serveur) ;
    - la confirmation d'email n'est pas nécessaire (les comptes sont créés déjà confirmés).
@@ -163,7 +167,7 @@ npm run dev                       # http://localhost:3000
 
 ### ⚠ Traductions swahili « à relire »
 
-**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (352 textes). Priorités de relecture :
+**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (549 textes). Priorités de relecture :
 
 | Priorité | Clés | Pourquoi |
 |---|---|---|
@@ -172,7 +176,10 @@ npm run dev                       # http://localhost:3000
 | 2 | `ride.status.*`, `client.onTheWay`, `client.hasArrived`, `client.confirm`, `boda.waitingConfirm` | Statuts de course et confirmation (c'est ce qui déclenche le comptage) |
 | 2 | `errors.*` | Messages d'erreur : courts, non accusateurs |
 | 1 | **Nouveaux (destination facultative)** : `client.destinationLabel`, `client.destinationPlaceholder`, `client.destinationHint`, `client.placesLabel`, `client.placeOnMap`, `client.placingHint`, `client.destinationPinned`, `client.removePin`, `client.pickupNoteLabel`, `client.pickupNoteHint`, `client.pickupNotePlaceholder`, `client.gpsFallback`, `client.gpsImprecise`, `boda.destinationToClarify`, `boda.destinationOnMap`, `boda.pickupNote` | Vocabulaire de lieux/repères : un Boda de Kilgoris dirait-il ainsi ? Les exemples (« soko », « duka la buluu ») sont à adapter |
-| 3 | `admin.*` (dont `admin.places.*`, `errors.invalid_place`) | Uniquement vu par l'admin |
+| 1 | **Nouveaux (Shopping list)** : tout `shopping.*` (écran de choix « Safari » / « Orodha ya manunuzi », catégories, unités, statuts, **avertissement de paiement `shopping.payNotice`**, **message sur les factures `shopping.receiptsNotice`**, motifs de problème `shopping.problems.*`) et `shoppingBoda.*` (dont le **bandeau factures `shoppingBoda.receiptsBanner`**, les cases à cocher et les 5 boutons d'étape) | Textes qui engagent le comportement de l'argent et des reçus : doivent être parfaitement compris |
+| 2 | Noms d'articles du catalogue (`name_sw` dans la table `catalog_items`, graine de la migration) | « sukari, unga, mchele… » : à confirmer / corriger dans `/admin/catalog` |
+| 2 | `notify.shopping*`, `notify.delivering`, `notify.deliveredConfirm`, `ride.status.shopping/purchased/delivering`, `errors.empty_list` … `errors.already_reported` | Notifications et erreurs de la commande |
+| 3 | `admin.*` (dont `admin.places.*`, `admin.catalog.*`, `admin.shopping.*`, `errors.invalid_place`) | Uniquement vu par l'admin |
 
 Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis `npm run i18n:check && npm run i18n:review`.
 
@@ -182,7 +189,7 @@ Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis 
 
 | Commande | Ce qu'elle vérifie |
 |---|---|
-| `npm run test:db` | Exécute **toutes les migrations** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin, **destination facultative (aucune / texte / texte + épingle / lieu fréquent / épingle seule : cycle complet de chacune), lieux fréquents (droits, RLS), migration sur une base contenant déjà des courses** (133 assertions) |
+| `npm run test:db` | Exécute **toutes les migrations** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin, **destination facultative (aucune / texte / texte + épingle / lieu fréquent / épingle seule : cycle complet de chacune), lieux fréquents (droits, RLS), migration sur une base contenant déjà des courses** (261 assertions, dont tout le cycle Shopping : RLS des articles et du téléphone, étapes, reçus bloquants côté base, signalements, comptage et auto-confirmation, statistiques admin) |
 | `npm run typecheck` / `npm run lint` | Types (dont clés de traduction) et ESLint |
 | `npm run i18n:check` | Cohérence EN / SW |
 

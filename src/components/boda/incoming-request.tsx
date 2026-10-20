@@ -8,17 +8,23 @@ import { distanceMeters, type LatLng } from '@/lib/geo';
 import { destinationPoint } from '@/lib/ride-map';
 import type { Ride } from '@/lib/types';
 import { RideDetails } from './ride-details';
+import { ShoppingIncoming } from './shopping-incoming';
 
-export function IncomingRequest({
-  ride, myPos, remainingSeconds, busy, onAccept, onDecline,
-}: {
+type Props = {
   ride: Ride;
   myPos: LatLng | null;
   remainingSeconds: number;
   busy: 'accept' | 'decline' | null;
   onAccept: () => void;
   onDecline: () => void;
-}) {
+};
+
+/** A shopping order has its own card; the ride card below is unchanged. */
+export function IncomingRequest(props: Props) {
+  return props.ride.type === 'shopping' ? <ShoppingIncoming {...props} /> : <IncomingRide {...props} />;
+}
+
+function IncomingRide({ ride, myPos, remainingSeconds, busy, onAccept, onDecline }: Props) {
   const t = useTranslations('boda');
   const fmt = useFormat();
   const pickup = { lat: ride.pickup_lat, lng: ride.pickup_lng };

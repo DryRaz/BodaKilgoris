@@ -15,6 +15,7 @@ const LIMIT = 500;
 export default function AdminRidesPage() {
   const t = useTranslations('admin.rides');
   const tr = useTranslations('ride');
+  const ts = useTranslations('shoppingBoda');
   const fmt = useFormat();
   const format = useFormatter();
   const [from, setFrom] = useState(() => nairobiDay(Date.now() - 6 * 86_400_000));
@@ -106,14 +107,17 @@ export default function AdminRidesPage() {
                   return (
                     <tr key={r.id} className="border-t border-line align-top">
                       <td className="whitespace-nowrap p-3">{format.dateTime(new Date(r.requested_at), { dateStyle: 'short', timeStyle: 'short' })}</td>
-                      <td className="p-3">{r.client_name}</td>
+                      <td className="p-3">
+                        {r.type === 'shopping' && <span className="mb-1 inline-block rounded-full bg-accent-400 px-2 py-0.5 text-xs font-extrabold text-[#1a1200]">🛒 {ts('badge')} · {r.items_count}</span>}
+                        <div>{r.client_name}</div>
+                      </td>
                       <td className="p-3">{r.boda_name}<br /><span className="text-xs text-muted">{r.boda_plate}</span></td>
                       <td className="p-3">
                         <RideStatusBadge status={r.status} />
                         {r.cancelled_by && <span className="ml-1 text-xs text-muted">{tr(`cancelledBy.${r.cancelled_by}`)}</span>}
                       </td>
                       <td className="whitespace-nowrap p-3 tabular-nums">{minutes === null ? '–' : `${minutes.toFixed(1)} min`}</td>
-                      <td className="whitespace-nowrap p-3 tabular-nums">{r.agreed_price_kes === null ? '–' : fmt.kes(r.agreed_price_kes)}</td>
+                      <td className="whitespace-nowrap p-3 tabular-nums">{r.type === 'shopping' ? (r.items_total_kes === null ? '–' : `${fmt.ksh(r.items_total_kes)} + ${fmt.ksh(r.delivery_fee_kes ?? 0)}`) : r.agreed_price_kes === null ? '–' : fmt.kes(r.agreed_price_kes)}</td>
                       <td className="space-y-1 p-3">
                         {r.status === 'completed' && (
                           <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-bold ${r.counted ? 'bg-brand-100 text-brand-900' : 'bg-line text-muted'}`}>
@@ -122,7 +126,7 @@ export default function AdminRidesPage() {
                         )}
                         {r.suspect && (
                           <div className="rounded-lg bg-warn-50 px-2 py-1 text-xs font-semibold text-[#7a5a00]">
-                            ⚠ {tr('suspect')}: {r.suspect_reason.map((x) => (x === 'too_fast' || x === 'pair_frequency' ? tr(`reason.${x}`) : x)).join(', ')}
+                            ⚠ {tr('suspect')}: {r.suspect_reason.map((x) => (x === 'too_fast' || x === 'pair_frequency' || x === 'problem_reported' ? tr(`reason.${x}`) : x)).join(', ')}
                           </div>
                         )}
                         {r.auto_confirmed && <div className="text-xs text-muted">{tr('autoConfirmed')}</div>}
