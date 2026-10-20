@@ -1,7 +1,12 @@
 export type Role = 'boda' | 'client' | 'admin';
 export type BodaStatus = 'pending' | 'approved' | 'suspended';
 export type RideStatus =
-  | 'requested' | 'accepted' | 'arrived' | 'completed' | 'declined' | 'expired' | 'cancelled';
+  | 'requested' | 'accepted' | 'arrived' | 'shopping' | 'purchased' | 'delivering'
+  | 'completed' | 'declined' | 'expired' | 'cancelled';
+/** A shopping order is a ride row with type 'shopping' (same matching, same confirmation, same counting). */
+export type RideType = 'ride' | 'shopping';
+export type ItemStatus = 'pending' | 'bought' | 'not_found' | 'replaced';
+export type ProblemType = 'receipts_not_shown' | 'total_mismatch' | 'missing_item' | 'other';
 
 export interface Profile {
   id: string;
@@ -27,6 +32,7 @@ export interface BodaProfile {
 
 export interface Ride {
   id: string;
+  type: RideType;
   client_id: string;
   boda_id: string;
   status: RideStatus;
@@ -62,7 +68,47 @@ export interface Ride {
   boda_photo_url: string | null;
   client_phone: string | null;
   boda_phone: string | null;
+  // ---- shopping orders (NULL / false / 0 on plain rides) ----
+  budget_max_kes: number | null;
+  client_note: string | null;
+  delivery_landmark: string | null;
+  items_count: number;
+  items_total_kes: number | null;
+  delivery_fee_kes: number | null;
+  receipts_kept: boolean;
+  receipts_shown: boolean;
+  problem_reported: boolean;
+  problem_type: ProblemType | null;
+  problem_text: string | null;
   created_at: string;
+}
+
+/** One article of the catalogue (public.catalog_items). */
+export interface CatalogItem {
+  id: string;
+  name_en: string;
+  name_sw: string;
+  category: string;
+  unit: string;
+  active: boolean;
+  sort_order: number;
+}
+
+/** One line of a shopping order (public.ride_items). */
+export interface RideItem {
+  id: string;
+  ride_id: string;
+  catalog_item_id: string | null;
+  custom_name: string | null;
+  name_en: string | null;
+  name_sw: string | null;
+  quantity: number;
+  unit: string | null;
+  is_custom: boolean;
+  status: ItemStatus;
+  replacement_text: string | null;
+  no_receipt: boolean;
+  position: number;
 }
 
 /** A frequent destination the admin maintains (public.places). */
@@ -95,4 +141,5 @@ export interface BodaLocation {
 }
 
 /** A ride that still needs the user's attention on screen. */
-export const ACTIVE_RIDE_STATUSES: RideStatus[] = ['requested', 'accepted', 'arrived'];
+export const RUNNING_RIDE_STATUSES: RideStatus[] = ['accepted', 'arrived', 'shopping', 'purchased', 'delivering'];
+export const ACTIVE_RIDE_STATUSES: RideStatus[] = ['requested', ...RUNNING_RIDE_STATUSES];

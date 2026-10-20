@@ -8,6 +8,8 @@ import { useRequireRole } from '@/components/auth-provider';
 import { AvailabilityToggle } from '@/components/boda/availability-toggle';
 import { BodaActiveRide } from '@/components/boda/active-ride';
 import { IncomingRequest } from '@/components/boda/incoming-request';
+import { ReceiptsBanner } from '@/components/boda/receipts-banner';
+import { BodaShoppingOrder } from '@/components/boda/shopping-order';
 import { useGeoConsent } from '@/components/geo-consent';
 import { PhotoUploader } from '@/components/photo-picker';
 import { useToast } from '@/components/toast';
@@ -21,6 +23,7 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { nairobiDay } from '@/lib/clock';
 import { AUTO_CONFIRM_MINUTES } from '@/lib/constants';
 import { GeoError, getPosition } from '@/lib/geolocation';
+import { RUNNING_RIDE_STATUSES } from '@/lib/types';
 import { alertNewRequest, ensureNotificationPermission } from '@/lib/notify';
 import { getSupabase } from '@/lib/supabase/client';
 
@@ -47,7 +50,7 @@ export default function BodaHomePage() {
   }, [reload, refresh]);
   useSweep(ready, onSwept);
 
-  const current = rides.find((r) => r.status === 'accepted' || r.status === 'arrived');
+  const current = rides.find((r) => RUNNING_RIDE_STATUSES.includes(r.status));
   const pending = useMemo(
     () =>
       rides
@@ -145,6 +148,8 @@ export default function BodaHomePage() {
         right={<Link href="/settings" aria-label="Settings" className="grid size-11 place-items-center rounded-full text-2xl active:bg-brand-50">⚙️</Link>}
       />
       <Page>
+        {current?.type === 'shopping' && <ReceiptsBanner />}
+
         {boda && !boda.photo_url && (
           <Card className="space-y-3">
             <h2 className="text-xl font-extrabold">{t('addPhotoTitle')}</h2>
@@ -188,7 +193,9 @@ export default function BodaHomePage() {
               </div>
             )}
 
-            {current && <BodaActiveRide ride={current} myPos={myPos} onChanged={() => void Promise.all([reload(), refresh()])} />}
+            {current && (current.type === 'shopping'
+              ? <BodaShoppingOrder ride={current} myPos={myPos} onChanged={() => void Promise.all([reload(), refresh()])} />
+              : <BodaActiveRide ride={current} myPos={myPos} onChanged={() => void Promise.all([reload(), refresh()])} />)}
 
             {!current &&
               pending.map((r) => (

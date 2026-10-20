@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useToast } from '@/components/toast';
 import { Button, Card, StarInput } from '@/components/ui';
+import { ShoppingConfirmCard } from '@/components/client/shopping-confirm';
 import { useErrorMessage } from '@/hooks/useErrorMessage';
 import { useFormat } from '@/hooks/useFormat';
 import { getSupabase } from '@/lib/supabase/client';
@@ -11,6 +12,11 @@ import type { Ride } from '@/lib/types';
 
 /** The ride is only counted once the client confirms (or after 30 min, automatically). */
 export function ConfirmCard({ ride, onDone }: { ride: Ride; onDone: () => void }) {
+  if (ride.type === 'shopping') return <ShoppingConfirmCard ride={ride} onDone={onDone} />;
+  return <RideConfirmCard ride={ride} onDone={onDone} />;
+}
+
+function RideConfirmCard({ ride, onDone }: { ride: Ride; onDone: () => void }) {
   const t = useTranslations('client');
   const te = useErrorMessage();
   const toast = useToast();

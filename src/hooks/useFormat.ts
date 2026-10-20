@@ -16,6 +16,8 @@ export function useFormat() {
       },
       countdown: formatDuration,
       kes: (amount: number) => t('kes', { amount: kesFormat.format(amount) }),
+      /** "KSh 1,200": the way shopping amounts are written (rides keep their existing "KES" format). */
+      ksh: (amount: number) => t('ksh', { amount: kesFormat.format(amount) }),
     }),
     [t],
   );

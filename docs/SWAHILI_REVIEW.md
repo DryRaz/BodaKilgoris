@@ -22,7 +22,7 @@ How to review: edit `messages/sw.json` directly (keep the `{placeholders}` exact
 | Cash | pesa taslimu | cash (many people just say "cash") |
 | Plate number | Nambari ya pikipiki | Namba ya pikipiki |
 
-Total strings: 352
+Total strings: 549
 
 ## common
 
@@ -52,6 +52,7 @@ Total strings: 352
 | `common.away` | Away | Mbali |
 | `common.showPassword` | Show | Onyesha |
 | `common.hidePassword` | Hide | Ficha |
+| `common.ksh` | KSh {amount} | KSh {amount} |
 
 ## language
 
@@ -269,6 +270,7 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `client.pickupNotePlaceholder` | Example: in front of the blue shop | Mfano: mbele ya duka la buluu |
 | `client.gpsFallback` | We could not get your GPS position. Tap the map to place your pick-up pin. | Hatukuweza kupata mahali ulipo kwa GPS. Gusa ramani kuweka alama ya mahali pa kuchukuliwa. |
 | `client.gpsImprecise` | Your GPS is not very precise (about {meters} m). Check the pin, or tap the map to move it. | GPS yako si sahihi sana (karibu mita {meters}). Angalia alama, au gusa ramani kuihamisha. |
+| `client.home` | Home | Mwanzo |
 
 ## ride
 
@@ -283,12 +285,16 @@ _Ride status words appear as small badges: they must stay short._
 | `ride.status.declined` | Declined | Imekataliwa |
 | `ride.status.expired` | Expired | Imeisha muda |
 | `ride.status.cancelled` | Cancelled | Imeghairiwa |
+| `ride.status.shopping` | Shopping | Anafanya manunuzi |
+| `ride.status.purchased` | Shopping done | Manunuzi yamekamilika |
+| `ride.status.delivering` | Delivering | Njiani kuleta |
 | `ride.counted` | Counted | Imehesabiwa |
 | `ride.notCounted` | Not counted | Haijahesabiwa |
 | `ride.suspect` | Suspect | Ina mashaka |
 | `ride.autoConfirmed` | Auto-confirmed | Imethibitishwa yenyewe |
 | `ride.reason.too_fast` | Too fast (under 2 minutes) | Haraka mno (chini ya dakika 2) |
 | `ride.reason.pair_frequency` | Same client and Boda: more than 10 rides in a day | Mteja na Boda yuleyule: safari zaidi ya 10 kwa siku |
+| `ride.reason.problem_reported` | Problem reported by the client | Mteja ameripoti tatizo |
 | `ride.cancelledBy.client` | by client | na mteja |
 | `ride.cancelledBy.boda` | by Boda | na dereva |
 | `ride.cancelledBy.system` | by system | na mfumo |
@@ -302,6 +308,10 @@ _Ride status words appear as small badges: they must stay short._
 | `notify.arrived` | {name} has arrived. | {name} amefika. |
 | `notify.completed` | The ride is finished. Please confirm it. | Safari imekwisha. Tafadhali ithibitishe. |
 | `notify.tapToOpen` | Tap to open | Gusa kufungua |
+| `notify.shoppingStarted` | {name} started your shopping. | {name} ameanza manunuzi yako. |
+| `notify.shoppingDone` | {name} finished the shopping. Items total: {amount}. | {name} amemaliza manunuzi. Jumla ya bidhaa: {amount}. |
+| `notify.delivering` | {name} is bringing your shopping. | {name} anakuletea manunuzi. |
+| `notify.deliveredConfirm` | Your shopping was delivered. Please check the receipts and confirm. | Manunuzi yako yamefikishwa. Tafadhali angalia risiti na uthibitishe. |
 
 ## admin
 
@@ -315,6 +325,8 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.nav.rides` | Rides | Safari |
 | `admin.nav.map` | Live map | Ramani ya moja kwa moja |
 | `admin.nav.places` | Places | Maeneo |
+| `admin.nav.shopping` | Shopping | Manunuzi |
+| `admin.nav.catalog` | Catalogue | Orodha ya bidhaa |
 | `admin.overview.question` | How many real rides go through the app? | Ni safari ngapi za kweli zinapita kwenye programu? |
 | `admin.overview.counted` | Counted rides | Safari zilizohesabiwa |
 | `admin.overview.countedHint` | Confirmed by both the Boda and the client | Zimethibitishwa na dereva na mteja wote wawili |
@@ -405,6 +417,62 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.places.edit` | Edit | Badilisha |
 | `admin.places.deactivate` | Hide | Ficha |
 | `admin.places.activate` | Show again | Onyesha tena |
+| `admin.catalog.title` | Article catalogue | Orodha ya bidhaa |
+| `admin.catalog.intro` | Clients tick articles from this list when they write a shopping list. Hiding an article only removes it from new lists: past orders keep the names they were made with. | Wateja huchagua bidhaa kutoka orodha hii wanapoandika orodha ya manunuzi. Kuficha bidhaa kunaiondoa kwenye orodha mpya tu: maagizo ya zamani hayabadiliki. |
+| `admin.catalog.addTitle` | Add an article | Ongeza bidhaa |
+| `admin.catalog.editTitle` | Edit this article | Badilisha bidhaa hii |
+| `admin.catalog.nameEn` | Name (English) | Jina (Kiingereza) |
+| `admin.catalog.nameSw` | Name (Kiswahili) | Jina (Kiswahili) |
+| `admin.catalog.category` | Category | Kundi |
+| `admin.catalog.unit` | Unit | Kipimo |
+| `admin.catalog.unitHint` | Shown next to the quantity. | Huonyeshwa karibu na kiasi. |
+| `admin.catalog.add` | Add the article | Ongeza bidhaa |
+| `admin.catalog.saveChanges` | Save changes | Hifadhi mabadiliko |
+| `admin.catalog.cancelEdit` | Cancel | Ghairi |
+| `admin.catalog.saved` | Saved | Imehifadhiwa |
+| `admin.catalog.hidden` | hidden | imefichwa |
+| `admin.catalog.up` | Move up | Pandisha |
+| `admin.catalog.down` | Move down | Shusha |
+| `admin.catalog.edit` | Edit | Badilisha |
+| `admin.catalog.hide` | Hide | Ficha |
+| `admin.catalog.show` | Show again | Onyesha tena |
+| `admin.shopping.title` | Shopping orders | Maagizo ya manunuzi |
+| `admin.shopping.hint` | Counted separately from rides, with the same rule: an order is counted when the Boda AND the client confirm (or after 30 minutes). | Yanahesabiwa tofauti na safari, kwa kanuni ileile: agizo linahesabiwa Boda NA mteja wakithibitisha (au baada ya dakika 30). |
+| `admin.shopping.today` | Today | Leo |
+| `admin.shopping.week` | This week | Wiki hii |
+| `admin.shopping.month` | This month | Mwezi huu |
+| `admin.shopping.total` | total | jumla |
+| `admin.shopping.requests` | Requests | Maombi |
+| `admin.shopping.avgOrder` | Average order value | Wastani wa thamani ya agizo |
+| `admin.shopping.avgFee` | Average delivery fee | Wastani wa ada ya kuleta |
+| `admin.shopping.problemRate` | Problem reports | Ripoti za matatizo |
+| `admin.shopping.suspect` | Suspect (month) | Yenye shaka (mwezi) |
+| `admin.shopping.receiptsKept` | Orders: receipts kept | Maagizo: risiti zimehifadhiwa |
+| `admin.shopping.receiptsShown` | Orders: receipts shown | Maagizo: risiti zimeonyeshwa |
+| `admin.shopping.noReceiptItems` | Articles bought without receipt | Bidhaa zilizonunuliwa bila risiti |
+| `admin.shopping.awaiting` | Awaiting confirmation | Zinasubiri uthibitisho |
+| `admin.shopping.problemsByReason` | Problems by reason | Matatizo kwa sababu |
+| `admin.shopping.topItems` | Most requested articles | Bidhaa zinazoombwa zaidi |
+| `admin.shopping.topCustom` | Most frequent free-text articles | Bidhaa za kuandika zinazorudiwa zaidi |
+| `admin.shopping.topCustomHint` | Good candidates to add to the catalogue. | Zinafaa kuongezwa kwenye orodha ya bidhaa. |
+| `admin.shopping.noData` | No data yet. | Hakuna data bado. |
+| `admin.shopping.perBoda` | Per Boda | Kwa kila Boda |
+| `admin.shopping.boda` | Boda | Boda |
+| `admin.shopping.orders` | Orders | Maagizo |
+| `admin.shopping.counted` | Counted | Yaliyohesabiwa |
+| `admin.shopping.receiptsKeptShort` | Receipts kept | Risiti zimehifadhiwa |
+| `admin.shopping.receiptsShownShort` | Receipts shown | Risiti zimeonyeshwa |
+| `admin.shopping.noReceiptShort` | No receipt | Bila risiti |
+| `admin.shopping.problemsTitle` | Reported problems | Matatizo yaliyoripotiwa |
+| `admin.shopping.noProblems` | No problem reported. | Hakuna tatizo lililoripotiwa. |
+| `admin.shopping.itemsTotal` | Items total | Jumla ya bidhaa |
+| `admin.shopping.fee` | Delivery fee | Ada ya kuleta |
+| `admin.shopping.budget` | Budget | Bajeti |
+| `admin.shopping.kept` | kept | zimehifadhiwa |
+| `admin.shopping.shown` | shown | zimeonyeshwa |
+| `admin.shopping.footer` | No money goes through the app: the Boda advances it and the client repays on delivery. | Hakuna pesa inayopita kwenye programu: Boda anatoa kwanza na mteja anamlipa akifikishiwa. |
+| `admin.shopping.line` | {orders} orders · {counted} counted | maagizo {orders} · yaliyohesabiwa {counted} |
+| `admin.shopping.receiptsLine` | receipts kept {kept}% · shown {shown}% · without receipt {none}% | risiti zimehifadhiwa {kept}% · zimeonyeshwa {shown}% · bila risiti {none}% |
 
 ## errors
 
@@ -448,4 +516,143 @@ _Shown to people when something fails: must be short and not blaming._
 | `errors.photo_unreadable` | We could not read this photo. Please take or choose another one. | Hatukuweza kusoma picha hii. Tafadhali piga au chagua nyingine. |
 | `errors.photo_upload_failed` | The photo could not be saved. Please try again. | Picha haikuweza kuhifadhiwa. Tafadhali jaribu tena. |
 | `errors.invalid_place` | Please enter a name and valid coordinates. | Tafadhali weka jina na viwianishi sahihi. |
+| `errors.empty_list` | Add at least one article to your list. | Weka angalau bidhaa moja kwenye orodha yako. |
+| `errors.too_many_items` | The list is too long (60 items maximum). | Orodha ni ndefu mno (bidhaa 60 kwa kiwango cha juu). |
+| `errors.invalid_item` | One of the articles is not valid. Please check your list. | Moja ya bidhaa si sahihi. Tafadhali angalia orodha yako. |
+| `errors.invalid_amount` | Please enter a valid amount. | Tafadhali weka kiasi sahihi. |
+| `errors.receipts_required` | Please tick the receipts box first. | Tafadhali weka tiki kwenye kisanduku cha risiti kwanza. |
+| `errors.item_not_found` | This item was not found. | Bidhaa hii haikupatikana. |
+| `errors.invalid_problem` | Please choose a reason. | Tafadhali chagua sababu. |
+| `errors.already_reported` | A problem was already reported for this order. | Tatizo tayari liliripotiwa kwa agizo hili. |
+
+## shopping
+
+| Key | English | Kiswahili (à relire) |
+|---|---|---|
+| `shopping.homeTitle` | What do you need? | Unahitaji nini? |
+| `shopping.rideTitle` | Ride | Safari |
+| `shopping.rideHint` | A Boda takes you somewhere | Boda anakupeleka mahali |
+| `shopping.shoppingTitle` | Shopping list | Orodha ya manunuzi |
+| `shopping.shoppingHint` | A Boda buys and brings it to your door | Boda ananunua na kukuletea nyumbani |
+| `shopping.resume` | Continue my list ({count}) | Endelea na orodha yangu ({count}) |
+| `shopping.home` | Home | Mwanzo |
+| `shopping.stepOf` | Step {step} of 3 | Hatua {step} kati ya 3 |
+| `shopping.listTitle` | Your shopping list | Orodha yako ya manunuzi |
+| `shopping.searchPlaceholder` | Search an article… | Tafuta bidhaa… |
+| `shopping.categories.staples` | Basic food | Chakula cha msingi |
+| `shopping.categories.fresh` | Fresh food | Vyakula vibichi |
+| `shopping.categories.home` | Home | Nyumbani |
+| `shopping.categories.energy` | Energy | Nishati |
+| `shopping.categories.misc` | Other | Mengineyo |
+| `shopping.units.kg` | kg | kg |
+| `shopping.units.litre` | litre | lita |
+| `shopping.units.piece` | piece | kipande |
+| `shopping.units.packet` | packet | pakiti |
+| `shopping.units.sachet` | sachet | sacheti |
+| `shopping.units.bunch` | bunch | fungu |
+| `shopping.units.ksh` | KSh | KSh |
+| `shopping.noMatch` | No article found. Add it below as “Other item”. | Hakuna bidhaa iliyopatikana. Iweke hapa chini kama “Bidhaa nyingine”. |
+| `shopping.catalogEmpty` | The catalogue is empty for now. Use “Other item” below. | Orodha ya bidhaa ni tupu kwa sasa. Tumia “Bidhaa nyingine” hapa chini. |
+| `shopping.less` | Less | Punguza |
+| `shopping.more` | More | Ongeza |
+| `shopping.otherTitle` | Other item | Bidhaa nyingine |
+| `shopping.otherPlaceholder` | Example: 2 packets of Krackers biscuits | Mfano: pakiti 2 za biskuti za Krackers |
+| `shopping.addItem` | Add | Ongeza |
+| `shopping.otherHint` | Write anything you need, with the quantity if you want. | Andika kitu chochote unachohitaji, pamoja na kiasi ukipenda. |
+| `shopping.remove` | Remove | Ondoa |
+| `shopping.itemsCount` | {count, plural, =0 {No item} one {# item} other {# items}} | {count, plural, =0 {Hakuna bidhaa} one {Bidhaa #} other {Bidhaa #}} |
+| `shopping.checkList` | Check my list | Angalia orodha yangu |
+| `shopping.emptyList` | Add at least one article. | Weka angalau bidhaa moja. |
+| `shopping.startOver` | Clear the list and start over | Futa orodha na uanze upya |
+| `shopping.reviewTitle` | Check your list | Angalia orodha yako |
+| `shopping.addMore` | Add more articles | Ongeza bidhaa zaidi |
+| `shopping.budgetLabel` | Maximum budget (KSh), optional | Bajeti ya juu (KSh), si lazima |
+| `shopping.budgetHint` | The Boda will try to stay under this amount. | Boda atajaribu kutozidi kiasi hiki. |
+| `shopping.noteLabel` | Note for the Boda, optional | Ujumbe kwa Boda, si lazima |
+| `shopping.notePlaceholder` | Preferred brand, preferred shop… | Chapa unayopendelea, duka unalopendelea… |
+| `shopping.payNotice` | The Boda advances the money for the shopping. You repay him on delivery, on presentation of the receipts. The app does not handle money. | Boda anatoa pesa za manunuzi kwanza. Unamlipa akikuletea, baada ya kukuonyesha risiti. Programu hii haishughulikii pesa. |
+| `shopping.chooseBoda` | Choose a Boda | Chagua Boda |
+| `shopping.yourList` | {count, plural, one {Your list: # item} other {Your list: # items}} | {count, plural, one {Orodha yako: bidhaa #} other {Orodha yako: bidhaa #}} |
+| `shopping.editList` | Edit | Badilisha |
+| `shopping.sendList` | Send the list | Tuma orodha |
+| `shopping.tapMapDelivery` | Tap the map to place the delivery pin. | Gusa ramani kuweka alama ya mahali pa kupelekewa. |
+| `shopping.gpsFallbackDelivery` | We could not get your GPS position. Tap the map to place the delivery pin. | Hatukuweza kupata mahali ulipo kwa GPS. Gusa ramani kuweka alama ya mahali pa kupelekewa. |
+| `shopping.landmarkLabel` | Delivery landmark (optional) | Alama ya mahali pa kupelekewa (si lazima) |
+| `shopping.landmarkHint` | Helps the Boda find your door. | Inamsaidia Boda kupata nyumbani kwako. |
+| `shopping.landmarkPlaceholder` | Example: green gate, behind X school | Mfano: lango la kijani, nyuma ya shule ya X |
+| `shopping.order.accepted` | {name} accepted your list | {name} amekubali orodha yako |
+| `shopping.order.shopping` | {name} is doing your shopping | {name} anafanya manunuzi yako |
+| `shopping.order.purchased` | {name} finished the shopping | {name} amemaliza manunuzi |
+| `shopping.order.delivering` | {name} is bringing your shopping | {name} anakuletea manunuzi |
+| `shopping.order.completed` | {name} delivered your shopping | {name} amekuletea manunuzi yako |
+| `shopping.steps.accepted` | Accepted | Amekubali |
+| `shopping.steps.shopping` | Shopping | Anafanya manunuzi |
+| `shopping.steps.purchased` | Shopping done | Manunuzi yamekamilika |
+| `shopping.steps.delivering` | On the way | Njiani |
+| `shopping.steps.completed` | Delivered | Imefikishwa |
+| `shopping.itemStatus.pending` | To buy | Bado |
+| `shopping.itemStatus.bought` | Bought | Imenunuliwa |
+| `shopping.itemStatus.not_found` | Not found | Haipatikani |
+| `shopping.itemStatus.replaced` | Replaced | Imebadilishwa |
+| `shopping.noReceipt` | No receipt | Hakuna risiti |
+| `shopping.itemsTotal` | Items total: {amount} | Jumla ya bidhaa: {amount} |
+| `shopping.repayNotice` | You repay the Boda on delivery, after checking the receipts. Nothing is paid in the app. | Unamlipa Boda akikuletea, baada ya kuangalia risiti. Hakuna malipo kwenye programu. |
+| `shopping.overBudget` | This is above your maximum budget ({budget}). | Hii ni zaidi ya bajeti yako ya juu ({budget}). |
+| `shopping.budgetShort` | Max budget: {amount} | Bajeti ya juu: {amount} |
+| `shopping.deliveredTitle` | Delivery done | Manunuzi yamefikishwa |
+| `shopping.receiptsNotice` | Your Boda must show you the receipts. Check them against the list and the total before confirming. | Boda wako lazima akuonyeshe risiti. Zilinganishe na orodha na jumla kabla ya kuthibitisha. |
+| `shopping.itemsTotalLabel` | Items total | Jumla ya bidhaa |
+| `shopping.deliveryFee` | Delivery fee | Ada ya kuleta |
+| `shopping.totalToRepay` | To repay the Boda | Ya kumlipa Boda |
+| `shopping.rateTitle` | How was it? | Ilikuwaje? |
+| `shopping.rateOptional` | Rating is optional | Kupima ni hiari |
+| `shopping.confirmDelivery` | Confirm the delivery | Thibitisha uwasilishaji |
+| `shopping.reportProblem` | Report a problem | Ripoti tatizo |
+| `shopping.deliveryThanks` | Thank you! The delivery is confirmed. | Asante! Uwasilishaji umethibitishwa. |
+| `shopping.problemTitle` | What is the problem? | Tatizo ni nini? |
+| `shopping.problems.receipts_not_shown` | Receipts not shown | Risiti hazikuonyeshwa |
+| `shopping.problems.total_mismatch` | Total different from the receipts | Jumla ni tofauti na risiti |
+| `shopping.problems.missing_item` | Missing item | Bidhaa haipo |
+| `shopping.problems.other` | Other | Nyingine |
+| `shopping.problemDetails` | Tell us more (optional) | Tueleze zaidi (si lazima) |
+| `shopping.cancelReport` | Back | Rudi |
+| `shopping.sendReport` | Send the report | Tuma ripoti |
+| `shopping.problemSent` | Your report was sent. Thank you. | Ripoti yako imetumwa. Asante. |
+
+## shoppingBoda
+
+| Key | English | Kiswahili (à relire) |
+|---|---|---|
+| `shoppingBoda.badge` | Shopping | Manunuzi |
+| `shoppingBoda.itemsCount` | {count, plural, one {# item} other {# items}} | {count, plural, one {Bidhaa #} other {Bidhaa #}} |
+| `shoppingBoda.budget` | Max budget: {amount} | Bajeti ya juu: {amount} |
+| `shoppingBoda.noBudget` | No budget given | Hakuna bajeti |
+| `shoppingBoda.landmark` | Delivery landmark | Alama ya mahali pa kupeleka |
+| `shoppingBoda.note` | Note | Ujumbe |
+| `shoppingBoda.deliveryPoint` | Delivery point | Mahali pa kupeleka |
+| `shoppingBoda.advanceNotice` | You advance the money. The client repays you on delivery. Keep ALL the receipts. | Unatoa pesa kwanza. Mteja anakulipa ukimfikishia. Weka risiti ZOTE. |
+| `shoppingBoda.receiptsBanner` | Keep ALL the invoices and receipts from the shops. Show them to the client at delivery. | Weka ankara na risiti ZOTE za maduka. Zionyeshe kwa mteja unapomfikishia. |
+| `shoppingBoda.call` | Call | Piga simu |
+| `shoppingBoda.whatsapp` | WhatsApp | WhatsApp |
+| `shoppingBoda.budgetLabel` | Max budget | Bajeti ya juu |
+| `shoppingBoda.itemsTotal` | Items total | Jumla ya bidhaa |
+| `shoppingBoda.listTitle` | Items ({done}/{count} marked) | Bidhaa ({done}/{count} zimewekewa alama) |
+| `shoppingBoda.startToTick` | Press “I’m shopping” to start marking the items. | Bonyeza “Ninafanya manunuzi” kuanza kuweka alama kwenye bidhaa. |
+| `shoppingBoda.bought` | Bought | Imenunuliwa |
+| `shoppingBoda.notFound` | Not found | Haipatikani |
+| `shoppingBoda.replacement` | Replacement | Mbadala |
+| `shoppingBoda.replacementPlaceholder` | Replacement (optional) | Mbadala (si lazima) |
+| `shoppingBoda.saveReplacement` | OK | Sawa |
+| `shoppingBoda.noReceipt` | No receipt | Hakuna risiti |
+| `shoppingBoda.btnShopping` | I’m shopping | Ninafanya manunuzi |
+| `shoppingBoda.btnPurchased` | Shopping done | Manunuzi yamekamilika |
+| `shoppingBoda.btnDelivering` | On my way to the client | Niko njiani kwa mteja |
+| `shoppingBoda.btnDelivered` | Delivered | Imefikishwa |
+| `shoppingBoda.itemsTotalInput` | Total of the items (KSh) | Jumla ya bidhaa (KSh) |
+| `shoppingBoda.stillPending` | {count, plural, one {# item is still not marked.} other {# items are still not marked.}} | {count, plural, one {Bidhaa # bado haijawekewa alama.} other {Bidhaa # bado hazijawekewa alama.}} |
+| `shoppingBoda.receiptsKept` | I kept all the receipts | Nimehifadhi risiti zote |
+| `shoppingBoda.purchasedNeeds` | Enter the total and tick “I kept all the receipts”. | Weka jumla na uweke tiki kwenye “Nimehifadhi risiti zote”. |
+| `shoppingBoda.deliveryFeeInput` | Delivery fee (KSh) | Ada ya kuleta (KSh) |
+| `shoppingBoda.receiptsShown` | I showed the receipts to the client | Nimemwonyesha mteja risiti |
+| `shoppingBoda.deliveredNeeds` | Enter the delivery fee and tick “I showed the receipts to the client”. | Weka ada ya kuleta na uweke tiki kwenye “Nimemwonyesha mteja risiti”. |
 

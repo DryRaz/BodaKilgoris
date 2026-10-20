@@ -18,6 +18,9 @@ interface BodaRow {
   status: BodaStatus; is_available: boolean; rating_avg: number; rating_count: number;
   requests: number; responded: number; accepted: number; counted: number; suspect: number;
   avg_accept_seconds: number | null; last_online_at: string | null;
+  shopping_orders: number; shopping_counted: number; shopping_suspect: number;
+  receipts_kept_pct: number | null; receipts_shown_pct: number | null; no_receipt_pct: number | null;
+  avg_order_kes: number | null; avg_delivery_fee_kes: number | null;
 }
 
 const FILTERS: Array<'all' | BodaStatus> = ['all', 'pending', 'approved', 'suspended'];
@@ -29,6 +32,7 @@ const STATUS_STYLE: Record<BodaStatus, string> = {
 
 export default function AdminBodasPage() {
   const t = useTranslations('admin.bodas');
+  const ts = useTranslations('admin.shopping');
   const tc = useTranslations('common');
   const te = useErrorMessage();
   const toast = useToast();
@@ -139,6 +143,11 @@ export default function AdminBodasPage() {
                   <Metric label={t('counted')} value={r.counted} />
                   <Metric label={t('suspect')} value={r.suspect} warn={r.suspect > 0} />
                 </dl>
+                {r.shopping_orders > 0 && (
+                  <p className="rounded-xl bg-canvas px-3 py-2 text-xs text-muted" data-testid="boda-shopping-line">
+                    🛒 {ts('line', { orders: r.shopping_orders, counted: r.shopping_counted })} · 🧾 {ts('receiptsLine', { kept: r.receipts_kept_pct ?? '–', shown: r.receipts_shown_pct ?? '–', none: r.no_receipt_pct ?? '–' })}
+                  </p>
+                )}
                 <div className="flex items-center justify-between text-sm text-muted">
                   <span>{r.rating_count > 0 ? <Stars value={Number(r.rating_avg)} count={r.rating_count} size="text-sm" /> : '–'}</span>
                   <span>

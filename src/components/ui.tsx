@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
+import { useId, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'accent';
@@ -50,8 +50,8 @@ export function Button({
   );
 }
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={cn('rounded-2xl border border-line bg-white p-4 shadow-sm', className)}>{children}</section>;
+export function Card({ children, className = '', ...rest }: { children: ReactNode; className?: string } & Omit<HTMLAttributes<HTMLElement>, 'className' | 'children'>) {
+  return <section {...rest} className={cn('rounded-2xl border border-line bg-white p-4 shadow-sm', className)}>{children}</section>;
 }
 
 export function Field({

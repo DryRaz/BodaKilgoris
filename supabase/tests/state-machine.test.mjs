@@ -278,6 +278,256 @@ ok((await q('c1', `select * from places`)).length === 1, 're-running the migrati
   await old.close();
 }
 
+console.log('\n# shopping orders: catalogue, request, items, receipts gates, amounts');
+const cat = await q('c1', `select * from catalog_items order by sort_order`);
+ok(cat.length === 26 && cat[0].name_en === 'Sugar' && cat[0].name_sw === 'Sukari' && cat[0].unit === 'kg', 'seed catalogue (26 articles) readable by clients');
+ok(new Set(cat.map((c) => c.category)).size === 5, 'five categories');
+await fails('c1', `insert into catalog_items (name_en, name_sw, category) values ('x','y','z')`, 'permission denied');
+await fails('c1', `update catalog_items set active = false`, 'permission denied');
+await fails('c1', `select admin_save_catalog_item(null, 'Fish', 'Samaki', 'fresh', 'kg')`, 'forbidden');
+await fails('admin', `select admin_save_catalog_item(null, '', 'Samaki', 'fresh', 'kg')`, 'invalid_item');
+await fails('admin', `select admin_save_catalog_item('00000000-0000-0000-0000-00000000dead', 'a', 'b', 'c', 'd')`, 'not_found');
+const fish = (await q('admin', `select * from admin_save_catalog_item(null, ' Fish ', 'Samaki', 'fresh', 'kg')`))[0];
+ok(fish.name_en === 'Fish' && fish.sort_order > cat.at(-1).sort_order && fish.active, 'admin adds an article (appended at the end)');
+const fish2 = (await q('admin', `select * from admin_save_catalog_item('${fish.id}', 'Tilapia', 'Sato', 'fresh', 'piece', false)`))[0];
+ok(fish2.name_en === 'Tilapia' && fish2.unit === 'piece' && !fish2.active, 'admin edits + deactivates an article');
+ok((await q('c1', `select * from catalog_items`)).length === 26, 'clients do not see a deactivated article');
+ok((await q('admin', `select * from catalog_items`)).length === 27, 'admin sees all articles');
+const [first, second] = cat;
+await as('admin', () => db.query(`select admin_swap_catalog_order('${first.id}', '${second.id}')`));
+ok((await q('c1', `select name_en from catalog_items order by sort_order limit 1`))[0].name_en === second.name_en, 'admin reorders articles');
+const sugar = cat.find((c) => c.name_en === 'Sugar'), flour = cat.find((c) => c.name_en === 'Maize flour'), tea = cat.find((c) => c.name_en === 'Tea leaves');
+const items = (...x) => JSON.stringify(x).replace(/'/g, "''");
+
+async function online(b = 'b2') { await as(b, () => db.query(`select set_availability(true, -1.0, 34.88)`)); }
+await online('b2');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, '[]'::jsonb)`, 'empty_list');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, null)`, 'empty_list');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, '{"a":1}'::jsonb)`, 'empty_list');
+await fails('c1', `select request_shopping('${ID.b2}', null, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`, 'invalid_location');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: fish.id })}'::jsonb)`, 'invalid_item');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, '${items({ custom_name: '   ' })}'::jsonb)`, 'invalid_item');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: '00000000-0000-0000-0000-00000000dead' })}'::jsonb)`, 'invalid_item');
+await fails('admin', `select request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`, 'not_a_client');
+await fails('c1', `select request_shopping('${ID.b1}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`, 'boda_unavailable'); // b1 is not available
+ok((await db.query(`select count(*)::int n from rides where type = 'shopping'`)).rows[0].n === 0, 'failed requests leave nothing behind (no ride, no items)');
+ok((await db.query(`select count(*)::int n from ride_items`)).rows[0].n === 0, 'no orphan items');
+
+// (a) catalogue only -> the full path
+const a = (await q('c1', `select * from request_shopping('${ID.b2}', -1.003, 34.876,
+  '${items({ catalog_item_id: sugar.id, quantity: 2 }, { catalog_item_id: flour.id, quantity: 1 }, { catalog_item_id: tea.id })}'::jsonb,
+  1500, 'Brand: Kakira please', 'green gate')`))[0];
+ok(a.type === 'shopping' && a.status === 'requested' && a.items_count === 3 && a.budget_max_kes === 1500
+   && a.client_note === 'Brand: Kakira please' && a.delivery_landmark === 'green gate' && a.pickup_note === null, 'shopping request created');
+ok(a.client_phone === null && a.items_total_kes === null && a.delivery_fee_kes === null && !a.receipts_kept && !a.receipts_shown && !a.problem_reported, 'no phone / amounts / flags yet');
+const aItems = await q('c1', `select * from ride_items where ride_id = '${a.id}' order by position`);
+ok(aItems.length === 3 && aItems[0].name_en === 'Sugar' && aItems[0].name_sw === 'Sukari' && aItems[0].quantity === 2 && aItems[0].unit === 'kg' && !aItems[0].is_custom && aItems[0].status === 'pending',
+   'lines copied with name snapshot, unit, quantity');
+ok(aItems[2].quantity === 1, 'quantity defaults to 1');
+await fails('c1', `select request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`, 'client_has_active_ride');
+ok((await q('c2', `select * from ride_items`)).length === 0, 'another client cannot read the items');
+ok((await q('b1', `select * from ride_items`)).length === 0 && (await q('b1', `select * from rides where id='${a.id}'`)).length === 0, 'another Boda cannot read the order or its items');
+ok((await q('b2', `select * from ride_items where ride_id = '${a.id}'`)).length === 3, 'the requested Boda reads the full list before accepting');
+ok((await q('admin', `select * from ride_items where ride_id = '${a.id}'`)).length === 3, 'admin reads the items');
+await fails('b2', `update ride_items set status = 'bought'`, 'permission denied');
+await fails('b2', `select shopping_start('${a.id}')`, 'invalid_state');                  // not accepted yet
+await fails('b2', `select shopping_set_item('${aItems[0].id}', 'bought')`, 'invalid_state');
+const aa = (await q('b2', `select * from accept_ride('${a.id}')`))[0];
+ok(aa.status === 'accepted' && aa.client_phone === '+254711000001', 'accept: the client phone reaches the assigned Boda');
+ok((await q('b1', `select * from rides where id='${a.id}' or client_phone = '+254711000001' and boda_id <> '${ID.b1}'`)).length === 0, 'the phone is visible to nobody else (other Boda)');
+ok((await q('c2', `select * from rides where id='${a.id}'`)).length === 0, 'the phone is visible to nobody else (other client)');
+ok((await db.query(`select is_available from boda_profiles where user_id='${ID.b2}'`)).rows[0].is_available === false, 'Boda automatically unavailable during the order');
+await fails('b2', `select arrive_ride('${a.id}')`, 'invalid_transition');                  // shopping has no "arrived"
+await fails('b2', `select complete_ride('${a.id}')`, 'invalid_state');
+await fails('b2', `select shopping_purchased('${a.id}', 100, true)`, 'invalid_state');
+await fails('c1', `select shopping_start('${a.id}')`, 'ride_not_found');
+await fails('b1', `select shopping_start('${a.id}')`, 'ride_not_found');
+await fails('b2', `select set_availability(true, -1, 34.8)`, 'ride_in_progress');
+const as1 = (await q('b2', `select * from shopping_start('${a.id}')`))[0];
+ok(as1.status === 'shopping' && as1.shopping_at, 'accepted -> shopping');
+ok((await q('c1', `select * from boda_locations`)).length === 1, 'client follows the Boda during shopping');
+await as('b2', () => db.query(`select update_location(-1.0034, 34.8768)`));
+
+// (d) not found / replaced / bought / no receipt
+await fails('b1', `select shopping_set_item('${aItems[0].id}', 'bought')`, 'item_not_found');
+await fails('c1', `select shopping_set_item('${aItems[0].id}', 'bought')`, 'item_not_found');
+await fails('b2', `select shopping_set_item('00000000-0000-0000-0000-00000000dead', 'bought')`, 'item_not_found');
+await fails('b2', `select shopping_set_item('${aItems[0].id}', 'weird')`, 'invalid_item');
+const i0 = (await q('b2', `select * from shopping_set_item('${aItems[0].id}', 'bought', null, true)`))[0];
+ok(i0.status === 'bought' && i0.no_receipt === true, 'bought + "no receipt" (market stall)');
+const i1 = (await q('b2', `select * from shopping_set_item('${aItems[1].id}', 'not_found')`))[0];
+ok(i1.status === 'not_found' && i1.replacement_text === null, 'not found');
+const i2 = (await q('b2', `select * from shopping_set_item('${aItems[2].id}', 'replaced', '  Ketepa tea  ')`))[0];
+ok(i2.status === 'replaced' && i2.replacement_text === 'Ketepa tea', 'replaced with a replacement text');
+const i2b = (await q('b2', `select * from shopping_set_item('${aItems[2].id}', 'replaced', '   ')`))[0];
+ok(i2b.status === 'not_found' && i2b.replacement_text === null, 'replaced without text falls back to not found');
+await q('b2', `select * from shopping_set_item('${aItems[2].id}', 'replaced', 'Ketepa tea')`);
+const seen = await q('c1', `select status, replacement_text, no_receipt from ride_items where ride_id = '${a.id}' order by position`);
+ok(seen.map((x) => x.status).join() === 'bought,not_found,replaced' && seen[2].replacement_text === 'Ketepa tea', 'the client sees bought / not found / replaced');
+
+// receipts gate + amounts
+await fails('b2', `select shopping_purchased('${a.id}', 850, false)`, 'receipts_required');
+await fails('b2', `select shopping_purchased('${a.id}', 850, null)`, 'receipts_required');
+await fails('b2', `select shopping_purchased('${a.id}', null, true)`, 'invalid_amount');
+await fails('b2', `select shopping_purchased('${a.id}', -5, true)`, 'invalid_amount');
+await fails('b2', `select shopping_deliver_start('${a.id}')`, 'invalid_state');
+await fails('c1', `select shopping_purchased('${a.id}', 850, true)`, 'ride_not_found');
+const ap = (await q('b2', `select * from shopping_purchased('${a.id}', 850, true)`))[0];
+ok(ap.status === 'purchased' && ap.items_total_kes === 850 && ap.receipts_kept && ap.purchased_at, 'shopping -> purchased with total + receipts kept');
+ok((await q('c1', `select items_total_kes from rides where id='${a.id}'`))[0].items_total_kes === 850, 'the client reads the items total right away');
+await q('b2', `select * from shopping_set_item('${aItems[1].id}', null, null, true)`);       // still editable while purchased
+await fails('b2', `select complete_ride('${a.id}')`, 'invalid_state');
+const ad = (await q('b2', `select * from shopping_deliver_start('${a.id}')`))[0];
+ok(ad.status === 'delivering' && ad.delivering_at, 'purchased -> delivering');
+await fails('b2', `select shopping_set_item('${aItems[0].id}', 'pending')`, 'invalid_state');  // list frozen
+await fails('b2', `select shopping_complete('${a.id}', 100, false)`, 'receipts_required');
+await fails('b2', `select shopping_complete('${a.id}', null, true)`, 'invalid_amount');
+await fails('b2', `select shopping_complete('${a.id}', 999999, true)`, 'invalid_amount');
+ok((await q('c1', `select * from boda_locations`)).length === 1, 'client still follows the Boda while delivering');
+const ac = (await q('b2', `select * from shopping_complete('${a.id}', 100, true)`))[0];
+ok(ac.status === 'completed' && ac.delivery_fee_kes === 100 && ac.receipts_shown && ac.boda_confirmed && !ac.counted && !ac.client_confirmed, 'delivering -> completed (Boda side confirmed, not counted yet)');
+ok(ac.client_phone === null, 'client phone removed from the order once it is over');
+ok(ac.suspect && ac.suspect_reason.includes('too_fast'), 'closed in under 5 minutes = suspect');
+ok((await q('c1', `select * from boda_locations`)).length === 0, 'Boda position no longer exposed after delivery');
+await fails('b2', `select report_ride_problem('${a.id}', 'other')`, 'ride_not_found');       // only the client
+const ap2 = (await q('c1', `select * from confirm_ride('${a.id}', 5::smallint)`))[0];
+ok(ap2.counted && ap2.client_confirmed && ap2.rating === 5, 'client confirmation + rating -> counted (same rule as rides)');
+ok((await q('b2', `select items_total_kes, delivery_fee_kes, receipts_kept, receipts_shown from rides where id='${a.id}'`))[0].delivery_fee_kes === 100, 'amounts stay readable');
+
+console.log('\n# shopping: custom + mixed lists, decline, cancel, no-receipt never blocks');
+await online('b2');
+const b = (await q('c2', `select * from request_shopping('${ID.b2}', -1.003, 34.876,
+  '${items({ custom_name: '2 packets of Krackers biscuits', quantity: 1 }, { custom_name: '  Blue Band  ' })}'::jsonb)`))[0];
+const bItems = await q('c2', `select * from ride_items where ride_id = '${b.id}' order by position`);
+ok(bItems.length === 2 && bItems.every((x) => x.is_custom && x.catalog_item_id === null && x.unit === null) && bItems[0].custom_name === '2 packets of Krackers biscuits' && bItems[1].custom_name === 'Blue Band', '(b) custom articles only (is_custom = true, trimmed)');
+ok(b.budget_max_kes === null && b.client_note === null && b.delivery_landmark === null, 'budget / note / landmark are optional');
+const decl = (await q('b2', `select * from decline_ride('${b.id}')`))[0];
+ok(decl.status === 'declined' && decl.client_phone === null, 'Boda declines a shopping request');
+ok((await q('c2', `select * from ride_items where ride_id = '${b.id}'`)).length === 2, 'the declined list is still readable (the app keeps it as a draft)');
+await online('b1');
+await as('admin', () => db.query(`select 1`));
+const c = (await q('c2', `select * from request_shopping('${ID.b1}', -1.003, 34.876,
+  '${items({ catalog_item_id: sugar.id, quantity: 3 }, { custom_name: 'Krackers' }, { catalog_item_id: tea.id, quantity: 99999 })}'::jsonb)`))[0];
+const cItems = await q('c2', `select * from ride_items where ride_id = '${c.id}' order by position`);
+ok(c.items_count === 3 && cItems[0].is_custom === false && cItems[1].is_custom === true && cItems[2].quantity === 10000, '(c) mixed list, another Boda after a refusal; absurd quantity is capped');
+await q('b1', `select * from accept_ride('${c.id}')`);
+ok((await q('b2', `select * from rides where id='${c.id}'`)).length === 0 && (await q('b2', `select * from ride_items where ride_id='${c.id}'`)).length === 0, 'the Boda who refused earlier cannot read the order of the next one');
+await q('b1', `select * from shopping_start('${c.id}')`);
+await q('b1', `select * from shopping_set_item('${cItems[0].id}', 'bought', null, true)`);
+await q('b1', `select * from shopping_set_item('${cItems[1].id}', 'bought', null, true)`);
+await q('b1', `select * from shopping_set_item('${cItems[2].id}', 'bought', null, true)`);
+await q('b1', `select * from shopping_purchased('${c.id}', 0, true)`);                       // total 0 is a valid number
+await q('b1', `select * from shopping_deliver_start('${c.id}')`);
+await db.exec(`update rides set accepted_at = now() - interval '12 minutes' where id='${c.id}'`);
+const cc = (await q('b1', `select * from shopping_complete('${c.id}', 0, true)`))[0];
+ok(cc.status === 'completed' && !cc.suspect_reason.includes('too_fast') && cc.delivery_fee_kes === 0, '"no receipt" lines and 0 amounts never block the closing; 12 min is not suspect');
+ok((await db.query(`select count(*)::int n from ride_items where ride_id='${c.id}' and no_receipt`)).rows[0].n === 3, '"no receipt" recorded on every line');
+await db.exec(`update rides set completed_at = now() - interval '31 minutes' where id='${c.id}'`);
+await as('c1', () => db.query(`select sweep_rides()`));
+const auto2 = (await db.query(`select * from rides where id='${c.id}'`)).rows[0];
+ok(auto2.client_confirmed && auto2.auto_confirmed && auto2.counted, 'shopping auto-confirmed after 30 min (flagged) and counted');
+
+await online('b2');
+const d1 = (await q('c1', `select * from request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`))[0];
+const cx1 = (await q('c1', `select * from cancel_ride('${d1.id}')`))[0];
+ok(cx1.status === 'cancelled' && cx1.cancelled_by === 'client', 'client cancels a requested shopping order');
+const d2 = (await q('c1', `select * from request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`))[0];
+await q('b2', `select * from accept_ride('${d2.id}')`);
+await q('b2', `select * from shopping_start('${d2.id}')`);
+const cx2 = (await q('b2', `select * from cancel_ride('${d2.id}')`))[0];
+ok(cx2.status === 'cancelled' && cx2.cancelled_by === 'boda' && cx2.client_phone === null, 'Boda cancels while shopping');
+ok((await q('c1', `select * from boda_locations`)).length === 0, 'location cleaned after a cancelled shopping order');
+await online('b2');
+const d3 = (await q('c1', `select * from request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`))[0];
+await db.exec(`update rides set expires_at = now() - interval '1 second' where id='${d3.id}'`);
+await fails('b2', `select accept_ride('${d3.id}')`, 'ride_expired');
+await as('c1', () => db.query(`select sweep_rides()`));
+ok((await db.query(`select status from rides where id='${d3.id}'`)).rows[0].status === 'expired', 'a shopping request expires like a ride');
+
+console.log('\n# shopping: problem reports (every reason), raw-SQL guards');
+async function deliveredOrder(client) {
+  await online('b2');
+  const x = (await q(client, `select * from request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: flour.id })}'::jsonb)`))[0];
+  await q('b2', `select * from accept_ride('${x.id}')`);
+  await q('b2', `select * from shopping_start('${x.id}')`);
+  await q('b2', `select * from shopping_purchased('${x.id}', 200, true)`);
+  await q('b2', `select * from shopping_deliver_start('${x.id}')`);
+  return x;
+}
+const pr = await deliveredOrder('c1');
+await fails('c1', `select report_ride_problem('${pr.id}', 'other')`, 'invalid_state');          // not delivered yet
+await q('b2', `select * from shopping_complete('${pr.id}', 50, true)`);
+await fails('c1', `select report_ride_problem('${pr.id}', 'nonsense')`, 'invalid_problem');
+await fails('c1', `select report_ride_problem('${pr.id}', null)`, 'invalid_problem');
+await fails('c2', `select report_ride_problem('${pr.id}', 'other')`, 'ride_not_found');
+await fails('b2', `select report_ride_problem('${pr.id}', 'other')`, 'ride_not_found');
+const rep = (await q('c1', `select * from report_ride_problem('${pr.id}', 'total_mismatch', '  total is 300 on the receipts  ')`))[0];
+ok(rep.problem_reported && rep.problem_type === 'total_mismatch' && rep.problem_text === 'total is 300 on the receipts' && rep.problem_at && rep.suspect_reason.includes('problem_reported') && rep.suspect, 'problem recorded (type + text + time) and flagged');
+await fails('c1', `select report_ride_problem('${pr.id}', 'other')`, 'already_reported');
+const conf2 = (await q('c1', `select * from confirm_ride('${pr.id}', 2::smallint)`))[0];
+ok(conf2.counted && conf2.problem_reported, 'the client can still confirm after reporting');
+for (const reason of ['receipts_not_shown', 'missing_item', 'other']) {
+  const o = await deliveredOrder('c1');
+  await q('b2', `select * from shopping_complete('${o.id}', 0, true)`);
+  const r = (await q('c1', `select * from report_ride_problem('${o.id}', '${reason}')`))[0];
+  ok(r.problem_type === reason && r.problem_text === null, `problem reason ${reason}`);
+}
+// a plain ride has no problem report
+await online('b2');
+const plain = (await q('c1', `select * from request_ride('${ID.b2}', -1.0, 34.88)`))[0];
+await fails('c1', `select report_ride_problem('${plain.id}', 'other')`, 'ride_not_found');
+await q('c1', `select cancel_ride('${plain.id}')`);
+
+// raw-SQL guards (superuser, bypassing the functions)
+await online('b2');
+const g2 = (await q('c1', `select * from request_shopping('${ID.b2}', -1.0, 34.88, '${items({ catalog_item_id: sugar.id })}'::jsonb)`))[0];
+for (const [sql, why] of [
+  [`update rides set status='arrived' where id='${g2.id}'`, 'requested->arrived'],
+  [`update rides set type='ride' where id='${g2.id}'`, 'type is immutable'],
+  [`update rides set items_count=9 where id='${g2.id}'`, 'items_count is immutable'],
+  [`update rides set items_total_kes=5 where id='${g2.id}'`, 'amount outside its step'],
+  [`update rides set delivery_fee_kes=5 where id='${g2.id}'`, 'fee outside its step'],
+  [`update rides set receipts_kept=true where id='${g2.id}'`, 'receipt flag outside its step'],
+  [`update rides set problem_reported=true, problem_type='other' where id='${g2.id}'`, 'problem on a non-completed order'],
+  [`update rides set status='shopping' where id='${g2.id}'`, 'requested->shopping'],
+]) {
+  try { await db.query(sql); ok(false, `should be refused: ${why}`); } catch (e) { ok(/invalid_|immutable/.test(e.message), `${why}: ${e.message}`); }
+}
+await q('b2', `select * from accept_ride('${g2.id}')`);
+try { await db.query(`update rides set status='purchased' where id='${g2.id}'`); ok(false, 'accepted->purchased'); } catch (e) { ok(e.message.includes('invalid_transition'), 'accepted->purchased: ' + e.message); }
+await db.exec(`update rides set status='shopping' where id='${g2.id}'`);
+try { await db.query(`update rides set status='purchased', items_total_kes=10 where id='${g2.id}'`); ok(false, 'purchased without receipts'); } catch (e) { ok(e.message.includes('receipts_required'), 'database insists on receipts_kept: ' + e.message); }
+try { await db.query(`update rides set status='purchased', receipts_kept=true where id='${g2.id}'`); ok(false, 'purchased without total'); } catch (e) { ok(e.message.includes('invalid_amount'), 'database insists on a total: ' + e.message); }
+await q('c1', `select cancel_ride('${g2.id}')`);
+// a ride cannot walk the shopping path
+await online('b2');
+const rr = (await q('c2', `select * from request_ride('${ID.b2}', -1.0, 34.88)`))[0];
+await q('b2', `select accept_ride('${rr.id}')`);
+try { await db.query(`update rides set status='shopping' where id='${rr.id}'`); ok(false, 'ride->shopping'); } catch (e) { ok(e.message.includes('invalid_transition'), 'a ride cannot become a shopping order: ' + e.message); }
+await q('c2', `select cancel_ride('${rr.id}')`);
+
+console.log('\n# shopping: admin numbers (rides and shopping are counted separately)');
+const so = (await q('admin', `select admin_shopping_overview() as o`))[0].o;
+const shopTotals = (await db.query(`select count(*)::int n, count(*) filter (where counted)::int c from rides where type='shopping'`)).rows[0];
+ok(so.requests.total === shopTotals.n && so.counted.total === shopTotals.c, `shopping counters (${shopTotals.n} orders, ${shopTotals.c} counted)`);
+ok(so.problems.reported === 4 && so.problem_types.total_mismatch === 1 && so.problem_types.receipts_not_shown === 1 && so.problem_types.missing_item === 1 && so.problem_types.other === 1, 'problems broken down by reason');
+ok(so.avg_order_kes !== null && so.avg_delivery_fee_kes !== null, 'average order value + delivery fee');
+ok(so.receipts.kept_pct === 100 && so.receipts.shown_pct === 100, 'receipts indicators');
+ok(so.no_receipt_items_pct > 0 && so.no_receipt_items_pct < 100, `"no receipt" lines share (${so.no_receipt_items_pct}%)`);
+ok(so.top_items[0].name_en === 'Sugar' && so.top_custom.some((x) => x.name === 'Krackers'), 'most requested articles + most frequent free articles');
+const ov2 = (await q('admin', `select admin_overview() as o`))[0].o;
+const rideReq = (await db.query(`select count(*)::int n from rides where type='ride' and requested_at >= date_trunc('day', now() at time zone 'Africa/Nairobi') at time zone 'Africa/Nairobi'`)).rows[0].n;
+ok(ov2.requests.today === rideReq, 'the existing overview counts rides only');
+const serShop = await q('admin', `select * from admin_daily_series(3, 'shopping')`);
+const serRide = await q('admin', `select * from admin_daily_series(3)`);
+ok(serShop.at(-1).requests === shopTotals.n && serRide.at(-1).requests === rideReq + 0 || serRide.at(-1).requests > 0, 'daily series per type');
+const bs = (await q('admin', `select * from admin_boda_stats()`)).find((x) => x.name === 'Wanjiru Boda');
+ok(bs.shopping_orders > 0 && bs.receipts_kept_pct === 100 && bs.receipts_shown_pct === 100 && bs.no_receipt_pct !== null, 'per-Boda shopping + receipts indicators');
+const probs = await q('admin', `select * from admin_shopping_problems()`);
+ok(probs.length === 4 && probs.every((x) => Array.isArray(x.items) && x.items.length === 1 && x.client_phone === '+254711000001'), 'problem list with the order detail (client phone from the profile)');
+await fails('c1', `select admin_shopping_overview()`, 'forbidden');
+await fails('b2', `select admin_shopping_problems()`, 'forbidden');
+
 console.log('\n# admin');
 ok((await db.query(`select count(*)::int n from boda_daily_activity`)).rows[0].n > 0
    && (await q('c1', `select * from boda_daily_activity`)).length === 0, 'activity rows exist but are admin-only');

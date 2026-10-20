@@ -1,11 +1,13 @@
 import { jsonError, requireAdmin } from '@/lib/server/auth';
 
 const COLUMNS = [
-  'id', 'requested_at', 'requested_at_nairobi', 'status', 'counted', 'suspect', 'suspect_reason',
+  'id', 'type', 'requested_at', 'requested_at_nairobi', 'status', 'counted', 'suspect', 'suspect_reason',
   'client_confirmed', 'boda_confirmed', 'auto_confirmed', 'accepted_at', 'arrived_at', 'completed_at',
   'accept_delay_seconds', 'ride_minutes', 'agreed_price_kes', 'rating', 'cancelled_by',
   'client_name', 'client_phone', 'boda_name', 'boda_plate', 'boda_phone',
   'destination_text', 'destination_lat', 'destination_lng', 'pickup_lat', 'pickup_lng', 'pickup_note',
+  'items_count', 'budget_max_kes', 'items_total_kes', 'delivery_fee_kes', 'receipts_kept', 'receipts_shown',
+  'delivery_landmark', 'problem_reported', 'problem_type', 'problem_text',
 ] as const;
 
 const nairobi = new Intl.DateTimeFormat('sv-SE', {
@@ -48,12 +50,21 @@ export async function GET(request: Request) {
     if (!data || data.length < PAGE) break;
   }
 
+  // Shopping orders drop the client's phone from the order row once they end; the admin still gets it from the profile.
+  const phones = new Map<string, string>();
+  const ids = [...new Set(rows.flatMap((r) => [r.client_id, r.boda_id] as string[]))];
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await ctx.supabase.from('profiles').select('id, phone').in('id', ids.slice(i, i + 200));
+    for (const p of data ?? []) if (p.phone) phones.set(p.id as string, p.phone as string);
+  }
+
   const lines = [COLUMNS.join(',')];
   for (const r of rows) {
     const acceptedAt = r.accepted_at ? Date.parse(r.accepted_at as string) : null;
     const completedAt = r.completed_at ? Date.parse(r.completed_at as string) : null;
     const derived: Record<string, unknown> = {
       ...r,
+      client_phone: r.client_phone ?? (r.type === 'shopping' && r.accepted_at ? phones.get(r.client_id as string) : '') ?? '',
       requested_at_nairobi: nairobi.format(new Date(r.requested_at as string)),
       accept_delay_seconds: acceptedAt ? Math.round((acceptedAt - Date.parse(r.requested_at as string)) / 1000) : '',
       ride_minutes: acceptedAt && completedAt ? ((completedAt - acceptedAt) / 60000).toFixed(1) : '',
