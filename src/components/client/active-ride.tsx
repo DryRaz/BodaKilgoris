@@ -10,6 +10,7 @@ import { useErrorMessage } from '@/hooks/useErrorMessage';
 import { useFormat } from '@/hooks/useFormat';
 import { useNow } from '@/hooks/useNow';
 import { distanceMeters, etaMinutes } from '@/lib/geo';
+import { destinationPoint } from '@/lib/ride-map';
 import { getSupabase } from '@/lib/supabase/client';
 import type { Ride } from '@/lib/types';
 
@@ -27,6 +28,7 @@ export function ClientActiveRide({ ride, onChanged }: { ride: Ride; onChanged: (
   const waiting = ride.status === 'requested';
   const remaining = Math.max(0, Math.round((Date.parse(ride.expires_at) - now) / 1000));
   const pickup = { lat: ride.pickup_lat, lng: ride.pickup_lng };
+  const dest = destinationPoint(ride);
 
   // the request just timed out: let the server expire it right away instead of waiting for the next sweep
   const sweptFor = useRef<string | null>(null);
@@ -91,10 +93,11 @@ export function ClientActiveRide({ ride, onChanged }: { ride: Ride; onChanged: (
         className="h-[40dvh] min-h-60 w-full"
         markers={[
           { id: 'pickup', ...pickup, kind: 'pickup' },
+          ...(dest ? [{ id: 'destination', ...dest, kind: 'destination' as const }] : []),
           ...(pos ? [{ id: 'boda', lat: pos.lat, lng: pos.lng, kind: 'boda' as const, label: ride.boda_name }] : []),
         ]}
         view={{ center: pickup, zoom: 16, key: ride.id }}
-        fitKey={`${ride.id}:${pos ? 1 : 0}`}
+        fitKey={`${ride.id}:${pos ? 1 : 0}:${dest ? 1 : 0}`}
       />
 
       {!confirmCancel ? (

@@ -22,7 +22,7 @@ How to review: edit `messages/sw.json` directly (keep the `{placeholders}` exact
 | Cash | pesa taslimu | cash (many people just say "cash") |
 | Plate number | Nambari ya pikipiki | Namba ya pikipiki |
 
-Total strings: 317
+Total strings: 352
 
 ## common
 
@@ -181,7 +181,6 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `boda.incomingTitle` | New ride request | Ombi jipya la safari |
 | `boda.client` | Client | Mteja |
 | `boda.destination` | Destination | Anakokwenda |
-| `boda.noDestination` | Not given | Hajasema |
 | `boda.pickupPoint` | Pick-up point | Mahali pa kumchukua mteja |
 | `boda.distanceFromYou` | {distance} from you | {distance} kutoka ulipo |
 | `boda.expiresIn` | Expires in {time} | Linaisha baada ya {time} |
@@ -212,6 +211,9 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `boda.requestExpired` | A request expired. | Ombi moja limeisha muda. |
 | `boda.addPhotoTitle` | Add your photo | Weka picha yako |
 | `boda.addPhotoBody` | Clients like to see who they ride with. It also helps the admin approve you. | Wateja wanapenda kuona nani atawabeba. Pia inamsaidia msimamizi kukuidhinisha. |
+| `boda.destinationToClarify` | Destination to be confirmed with the client | Mahali pa kwenda: kubaliana na mteja |
+| `boda.destinationOnMap` | Shown on the map | Inaonekana kwenye ramani |
+| `boda.pickupNote` | Pick-up landmark | Alama ya mahali pa kuchukuliwa |
 
 ## client
 
@@ -230,8 +232,8 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `client.useMyLocation` | Use my location | Tumia mahali nilipo |
 | `client.locating` | Finding you… | Tunakutafuta… |
 | `client.tapMap` | Tap the map to place the pick-up pin. | Gusa ramani ili kuweka alama ya mahali pa kuchukuliwa. |
-| `client.destinationLabel` | Where are you going? | Unakwenda wapi? |
-| `client.destinationPlaceholder` | Example: Kilgoris Market | Mfano: Soko la Kilgoris |
+| `client.destinationLabel` | Where are you going? (optional) | Unakwenda wapi? (si lazima) |
+| `client.destinationPlaceholder` | Landmark, area or place (e.g. near the market) | Alama, eneo au mahali (mfano: karibu na soko) |
 | `client.waitingTitle` | Waiting for {name}… | Tunamsubiri {name}… |
 | `client.waitingBody` | Your request expires in {time}. | Ombi lako linaisha baada ya {time}. |
 | `client.cancelRequest` | Cancel the request | Ghairi ombi |
@@ -255,6 +257,18 @@ _Legal-ish consent text. Please check it is clear and complete: people must unde
 | `client.thanks` | Thank you! The ride is confirmed. | Asante! Safari imethibitishwa. |
 | `client.newRide` | Back to the map | Rudi kwenye ramani |
 | `client.refreshList` | Refresh | Sasisha |
+| `client.destinationHint` | You can leave this empty and tell the Boda when he arrives. | Unaweza kuacha wazi na kumwambia Boda atakapofika. |
+| `client.placesLabel` | Quick places | Mahali pa kawaida |
+| `client.placeOnMap` | Place on the map | Weka kwenye ramani |
+| `client.placingHint` | Tap the map where you want to go. | Gusa ramani mahali unapokwenda. |
+| `client.cancelPlacing` | Cancel | Ghairi |
+| `client.destinationPinned` | Destination placed on the map | Mahali pa kwenda pamewekwa kwenye ramani |
+| `client.removePin` | Remove | Ondoa |
+| `client.pickupNoteLabel` | Pick-up landmark (optional) | Alama ya mahali pa kuchukuliwa (si lazima) |
+| `client.pickupNoteHint` | Helps the Boda find you. | Inamsaidia Boda kukupata. |
+| `client.pickupNotePlaceholder` | Example: in front of the blue shop | Mfano: mbele ya duka la buluu |
+| `client.gpsFallback` | We could not get your GPS position. Tap the map to place your pick-up pin. | Hatukuweza kupata mahali ulipo kwa GPS. Gusa ramani kuweka alama ya mahali pa kuchukuliwa. |
+| `client.gpsImprecise` | Your GPS is not very precise (about {meters} m). Check the pin, or tap the map to move it. | GPS yako si sahihi sana (karibu mita {meters}). Angalia alama, au gusa ramani kuihamisha. |
 
 ## ride
 
@@ -300,6 +314,7 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.nav.bodas` | Bodas | Boda |
 | `admin.nav.rides` | Rides | Safari |
 | `admin.nav.map` | Live map | Ramani ya moja kwa moja |
+| `admin.nav.places` | Places | Maeneo |
 | `admin.overview.question` | How many real rides go through the app? | Ni safari ngapi za kweli zinapita kwenye programu? |
 | `admin.overview.counted` | Counted rides | Safari zilizohesabiwa |
 | `admin.overview.countedHint` | Confirmed by both the Boda and the client | Zimethibitishwa na dereva na mteja wote wawili |
@@ -371,6 +386,25 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.map.title` | Available Bodas | Boda zilizo tayari |
 | `admin.map.none` | No Boda is available right now. | Hakuna Boda iliyo tayari sasa hivi. |
 | `admin.map.count` | {count, plural, =0 {No Boda available} one {# Boda available} other {# Bodas available}} | {count, plural, =0 {Hakuna Boda iliyo tayari} one {Boda # iko tayari} other {Boda # ziko tayari}} |
+| `admin.places.title` | Frequent places | Maeneo ya kawaida |
+| `admin.places.intro` | Clients see these as quick buttons under the destination field. Add the real places of Kilgoris. Deactivating a place only hides it; past rides are not changed. | Wateja wanaona haya kama vitufe vya haraka chini ya sehemu ya mahali pa kwenda. Weka maeneo halisi ya Kilgoris. Kuficha eneo hakubadilishi safari zilizopita. |
+| `admin.places.addTitle` | Add a place | Ongeza eneo |
+| `admin.places.editTitle` | Edit this place | Badilisha eneo hili |
+| `admin.places.name` | Name | Jina |
+| `admin.places.namePlaceholder` | Example: Kilgoris Market | Mfano: Soko la Kilgoris |
+| `admin.places.lat` | Latitude | Latitudo |
+| `admin.places.lng` | Longitude | Longitudo |
+| `admin.places.coordsHint` | Tap the map to set the position, or paste coordinates like -1.0035, 34.8767. | Gusa ramani kuweka mahali, au bandika viwianishi kama -1.0035, 34.8767. |
+| `admin.places.add` | Add the place | Ongeza eneo |
+| `admin.places.saveChanges` | Save changes | Hifadhi mabadiliko |
+| `admin.places.cancelEdit` | Cancel | Ghairi |
+| `admin.places.saved` | Saved | Imehifadhiwa |
+| `admin.places.empty` | No places yet. Add the first one above. | Hakuna maeneo bado. Ongeza la kwanza hapo juu. |
+| `admin.places.active` | Active | Linatumika |
+| `admin.places.inactive` | Hidden | Limefichwa |
+| `admin.places.edit` | Edit | Badilisha |
+| `admin.places.deactivate` | Hide | Ficha |
+| `admin.places.activate` | Show again | Onyesha tena |
 
 ## errors
 
@@ -413,4 +447,5 @@ _Shown to people when something fails: must be short and not blaming._
 | `errors.not_found` | Not found. | Haikupatikana. |
 | `errors.photo_unreadable` | We could not read this photo. Please take or choose another one. | Hatukuweza kusoma picha hii. Tafadhali piga au chagua nyingine. |
 | `errors.photo_upload_failed` | The photo could not be saved. Please try again. | Picha haikuweza kuhifadhiwa. Tafadhali jaribu tena. |
+| `errors.invalid_place` | Please enter a name and valid coordinates. | Tafadhali weka jina na viwianishi sahihi. |
 

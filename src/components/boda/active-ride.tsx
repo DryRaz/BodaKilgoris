@@ -9,8 +9,10 @@ import { Button, Card, Field, TextInput } from '@/components/ui';
 import { useErrorMessage } from '@/hooks/useErrorMessage';
 import { useFormat } from '@/hooks/useFormat';
 import { distanceMeters, type LatLng } from '@/lib/geo';
+import { destinationPoint } from '@/lib/ride-map';
 import { getSupabase } from '@/lib/supabase/client';
 import type { Ride } from '@/lib/types';
+import { RideDetails } from './ride-details';
 
 export function BodaActiveRide({
   ride, myPos, onChanged,
@@ -26,6 +28,7 @@ export function BodaActiveRide({
   const [confirmCancel, setConfirmCancel] = useState(false);
 
   const pickup = { lat: ride.pickup_lat, lng: ride.pickup_lng };
+  const dest = destinationPoint(ride);
 
   async function run(label: string, fn: string, args: Record<string, unknown>) {
     setBusy(label);
@@ -51,10 +54,7 @@ export function BodaActiveRide({
       <p className="text-base font-semibold text-brand-700">{arrivedAlready ? t('riding') : t('goToClient')}</p>
 
       <dl className="space-y-1 text-base">
-        <div className="flex gap-2">
-          <dt className="font-semibold">{t('destination')}:</dt>
-          <dd className="min-w-0 break-words">{ride.destination_text || <span className="text-muted">{t('noDestination')}</span>}</dd>
-        </div>
+        <RideDetails ride={ride} />
         {myPos && !arrivedAlready && (
           <div className="font-semibold">{t('distanceFromYou', { distance: fmt.distance(distanceMeters(myPos, pickup)) })}</div>
         )}
@@ -64,10 +64,11 @@ export function BodaActiveRide({
         className="h-52 w-full"
         markers={[
           { id: 'pickup', ...pickup, kind: 'pickup', label: ride.client_name },
+          ...(dest ? [{ id: 'destination', ...dest, kind: 'destination' as const }] : []),
           ...(myPos ? [{ id: 'me', ...myPos, kind: 'me' as const }] : []),
         ]}
         view={{ center: pickup, zoom: 16, key: ride.id }}
-        fitKey={`${ride.id}:${myPos ? 1 : 0}`}
+        fitKey={`${ride.id}:${myPos ? 1 : 0}:${dest ? 1 : 0}`}
       />
 
       {ride.client_phone && (

@@ -5,7 +5,9 @@ import { Map } from '@/components/map/Map';
 import { Button, Card } from '@/components/ui';
 import { useFormat } from '@/hooks/useFormat';
 import { distanceMeters, type LatLng } from '@/lib/geo';
+import { destinationPoint } from '@/lib/ride-map';
 import type { Ride } from '@/lib/types';
+import { RideDetails } from './ride-details';
 
 export function IncomingRequest({
   ride, myPos, remainingSeconds, busy, onAccept, onDecline,
@@ -20,6 +22,7 @@ export function IncomingRequest({
   const t = useTranslations('boda');
   const fmt = useFormat();
   const pickup = { lat: ride.pickup_lat, lng: ride.pickup_lng };
+  const dest = destinationPoint(ride);
   const urgent = remainingSeconds <= 30;
 
   return (
@@ -35,10 +38,7 @@ export function IncomingRequest({
       </div>
 
       <dl className="space-y-1 text-base">
-        <div className="flex gap-2">
-          <dt className="font-semibold">{t('destination')}:</dt>
-          <dd className="min-w-0 break-words">{ride.destination_text || <span className="text-muted">{t('noDestination')}</span>}</dd>
-        </div>
+        <RideDetails ride={ride} />
         {myPos && (
           <div className="font-semibold text-brand-700">{t('distanceFromYou', { distance: fmt.distance(distanceMeters(myPos, pickup)) })}</div>
         )}
@@ -51,10 +51,11 @@ export function IncomingRequest({
           interactive={false}
           markers={[
             { id: 'pickup', ...pickup, kind: 'pickup', label: ride.client_name },
+            ...(dest ? [{ id: 'destination', ...dest, kind: 'destination' as const }] : []),
             ...(myPos ? [{ id: 'me', ...myPos, kind: 'me' as const }] : []),
           ]}
           view={{ center: pickup, zoom: 16, key: ride.id }}
-          fitKey={`${ride.id}:${myPos ? 1 : 0}`}
+          fitKey={`${ride.id}:${myPos ? 1 : 0}:${dest ? 1 : 0}`}
         />
       </div>
 

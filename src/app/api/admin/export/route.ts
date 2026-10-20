@@ -5,7 +5,7 @@ const COLUMNS = [
   'client_confirmed', 'boda_confirmed', 'auto_confirmed', 'accepted_at', 'arrived_at', 'completed_at',
   'accept_delay_seconds', 'ride_minutes', 'agreed_price_kes', 'rating', 'cancelled_by',
   'client_name', 'client_phone', 'boda_name', 'boda_plate', 'boda_phone',
-  'destination_text', 'pickup_lat', 'pickup_lng',
+  'destination_text', 'destination_lat', 'destination_lng', 'pickup_lat', 'pickup_lng', 'pickup_note',
 ] as const;
 
 const nairobi = new Intl.DateTimeFormat('sv-SE', {

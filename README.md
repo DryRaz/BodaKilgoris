@@ -17,9 +17,9 @@ fiable** pour décider ensuite du modèle de rémunération. Le dashboard admin 
 | Interface | Écrans |
 |---|---|
 | **Premier lancement** | Choix de langue (2 gros boutons) avant toute inscription |
-| **Boda** (`/boda`) | Inscription en 2 étapes (1. nom, téléphone, plaque, PIN 4 chiffres → compte créé ; 2. photo, *optionnelle*, ajoutable plus tard depuis l'accueil ou les réglages) · statut *pending* tant que l'admin n'a pas validé · gros bouton disponible / indisponible · GPS toutes les ~12 s uniquement si disponible · demandes entrantes en temps réel avec mini-carte, accepter/refuser, expiration à 2 min · « Je suis arrivé » → « Course terminée » (+ prix optionnel) · indisponible automatiquement pendant une course |
-| **Client** (`/client`) | Nom + téléphone, session persistante · carte avec tous les Bodas disponibles **avec leur nom** · liste triée par distance avec note moyenne · le client **choisit** son Boda · point de prise en charge par GPS ou épingle · destination en texte libre · attente, suivi du Boda sur la carte, confirmation + note 1–5 (optionnelle) |
-| **Admin** (`/admin`) | Validation / suspension des Bodas · compteurs jour / semaine / mois · stats par Boda · taux et temps moyen d'acceptation · Bodas actifs par jour · courses suspectes · carte en direct · export CSV · réinitialisation du PIN d'un Boda |
+| **Boda** (`/boda`) | Inscription en 2 étapes (1. nom, téléphone, plaque, PIN 4 chiffres → compte créé ; 2. photo, *optionnelle*, ajoutable plus tard depuis l'accueil ou les réglages) · statut *pending* tant que l'admin n'a pas validé · gros bouton disponible / indisponible · GPS toutes les ~12 s uniquement si disponible · demandes entrantes en temps réel avec mini-carte (destination affichée seulement si elle existe, sinon « Destination à préciser avec le client »), accepter/refuser, expiration à 2 min · « Je suis arrivé » → « Course terminée » (+ prix optionnel) · indisponible automatiquement pendant une course |
+| **Client** (`/client`) | Nom + téléphone, session persistante · carte avec tous les Bodas disponibles **avec leur nom** · liste triée par distance avec note moyenne · le client **choisit** son Boda · point de prise en charge **obligatoire** : GPS d'abord, épingle manuelle si le GPS est refusé/imprécis (> 100 m), + « repère de prise en charge » facultatif · destination **entièrement facultative** : texte libre (repère, quartier), lieux fréquents en puces, bouton « Placer sur la carte » facultatif · attente, suivi du Boda sur la carte, confirmation + note 1–5 (optionnelle) |
+| **Admin** (`/admin`) | Validation / suspension des Bodas · compteurs jour / semaine / mois · stats par Boda · taux et temps moyen d'acceptation · Bodas actifs par jour · courses suspectes · carte en direct · **lieux fréquents** (`/admin/places` : ajout, édition, masquage) · export CSV · réinitialisation du PIN d'un Boda |
 | **Réglages** (`/settings`) | Langue, consentement GPS (retirable), déconnexion, installation PWA |
 
 Hors périmètre (volontairement absent) : M-Pesa, commissions, abonnements, calcul de prix, chat.
@@ -65,7 +65,9 @@ Les jours sont calculés en fuseau **Africa/Nairobi**.
 ### 3.1 Supabase
 
 1. Créez un projet sur [supabase.com](https://supabase.com) (région la plus proche du Kenya).
-2. **SQL Editor** → collez et exécutez **`supabase/migrations/20261016000000_init.sql`** (tables, RLS, fonctions, realtime, bucket photos).
+2. **SQL Editor** → collez et exécutez, **dans l'ordre**, les fichiers de `supabase/migrations/` :
+   1. **`20261016000000_init.sql`** (tables, RLS, fonctions, realtime, bucket photos) ;
+   2. **`20261020000000_optional_destination_places.sql`** (destination facultative + coordonnées facultatives, repère de prise en charge, table `places` **vide**, `request_ride` mise à jour). Idempotent, sans effet sur les courses existantes : sur un projet déjà en service, exécutez seulement celui-ci.
 3. **Authentication → Providers → Email** : laissez le fournisseur Email **activé**, mais :
    - désactivez **« Allow new users to sign up »** (les comptes sont créés uniquement par le serveur) ;
    - la confirmation d'email n'est pas nécessaire (les comptes sont créés déjà confirmés).
@@ -161,7 +163,7 @@ npm run dev                       # http://localhost:3000
 
 ### ⚠ Traductions swahili « à relire »
 
-**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (302 textes). Priorités de relecture :
+**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (352 textes). Priorités de relecture :
 
 | Priorité | Clés | Pourquoi |
 |---|---|---|
@@ -169,7 +171,8 @@ npm run dev                       # http://localhost:3000
 | 1 | `boda.available` / `boda.unavailable` (« Niko tayari » / « Siko tayari »), `boda.accept`, `boda.decline`, `boda.arrived`, `boda.complete` | Gros boutons utilisés toute la journée par les Bodas |
 | 2 | `ride.status.*`, `client.onTheWay`, `client.hasArrived`, `client.confirm`, `boda.waitingConfirm` | Statuts de course et confirmation (c'est ce qui déclenche le comptage) |
 | 2 | `errors.*` | Messages d'erreur : courts, non accusateurs |
-| 3 | `admin.*` | Uniquement vu par l'admin |
+| 1 | **Nouveaux (destination facultative)** : `client.destinationLabel`, `client.destinationPlaceholder`, `client.destinationHint`, `client.placesLabel`, `client.placeOnMap`, `client.placingHint`, `client.destinationPinned`, `client.removePin`, `client.pickupNoteLabel`, `client.pickupNoteHint`, `client.pickupNotePlaceholder`, `client.gpsFallback`, `client.gpsImprecise`, `boda.destinationToClarify`, `boda.destinationOnMap`, `boda.pickupNote` | Vocabulaire de lieux/repères : un Boda de Kilgoris dirait-il ainsi ? Les exemples (« soko », « duka la buluu ») sont à adapter |
+| 3 | `admin.*` (dont `admin.places.*`, `errors.invalid_place`) | Uniquement vu par l'admin |
 
 Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis `npm run i18n:check && npm run i18n:review`.
 
@@ -179,7 +182,7 @@ Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis 
 
 | Commande | Ce qu'elle vérifie |
 |---|---|
-| `npm run test:db` | Exécute la **vraie migration** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin (70 assertions) |
+| `npm run test:db` | Exécute **toutes les migrations** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin, **destination facultative (aucune / texte / texte + épingle / lieu fréquent / épingle seule : cycle complet de chacune), lieux fréquents (droits, RLS), migration sur une base contenant déjà des courses** (133 assertions) |
 | `npm run typecheck` / `npm run lint` | Types (dont clés de traduction) et ESLint |
 | `npm run i18n:check` | Cohérence EN / SW |
 

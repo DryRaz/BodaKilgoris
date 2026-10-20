@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 // Runs the real migration on an in-process Postgres (PGlite) and exercises
 // RLS + the ride state machine. Usage: npm run test:db
 const here = path.dirname(fileURLToPath(import.meta.url));
-const MIGRATION = path.join(here, '..', 'migrations', '20261016000000_init.sql');
+const MIGRATIONS = fs.readdirSync(path.join(here, '..', 'migrations')).filter((f) => f.endsWith('.sql')).sort();
 
 const db = new PGlite();
 let failures = 0, passes = 0;
@@ -26,8 +26,8 @@ await db.exec(`
   alter default privileges in schema public grant all on sequences to anon, authenticated;
   alter default privileges in schema public grant execute on functions to anon, authenticated;
 `);
-await db.exec(fs.readFileSync(MIGRATION, 'utf8'));
-console.log('migration applied');
+for (const m of MIGRATIONS) await db.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8'));
+console.log('migrations applied:', MIGRATIONS.join(', '));
 
 const ID = { admin: '00000000-0000-0000-0000-0000000000a1', b1: '00000000-0000-0000-0000-0000000000b1',
   b2: '00000000-0000-0000-0000-0000000000b2', c1: '00000000-0000-0000-0000-0000000000c1',
@@ -184,6 +184,99 @@ await db.exec(`update boda_locations set updated_at = now() - interval '20 minut
 await as('c1', () => db.query(`select sweep_rides()`));
 ok((await db.query(`select is_available from boda_profiles where user_id='${ID.b1}'`)).rows[0].is_available === false, 'silent boda switched off');
 ok((await db.query(`select count(*)::int n from boda_locations`)).rows[0].n === 0, 'orphan location rows removed');
+
+console.log('\n# optional destination: every combination runs the whole lifecycle');
+// b2 is a separate Boda from the ones above, so the pair-frequency flags of the earlier rides do not interfere
+async function cycle(label, who, requestSql, expect) {
+  await as('b2', () => db.query(`select set_availability(true, -1.0, 34.88)`));
+  const x = (await q(who, requestSql))[0];
+  for (const [k, v] of Object.entries(expect)) ok(x[k] === v, `${label}: ${k} = ${JSON.stringify(v)} (got ${JSON.stringify(x[k])})`);
+  const seenByBoda = (await q('b2', `select * from rides where id='${x.id}'`))[0];
+  ok(seenByBoda && seenByBoda.destination_lat === x.destination_lat && seenByBoda.pickup_note === x.pickup_note, `${label}: Boda reads the same row`);
+  const a = (await q('b2', `select * from accept_ride('${x.id}')`))[0];
+  const ar = (await q('b2', `select * from arrive_ride('${x.id}')`))[0];
+  const dn = (await q('b2', `select * from complete_ride('${x.id}', 200)`))[0];
+  const cf = (await q(who, `select * from confirm_ride('${x.id}', 4::smallint)`))[0];
+  ok(a.status === 'accepted' && ar.status === 'arrived' && dn.status === 'completed', `${label}: accepted -> arrived -> completed`);
+  ok(cf.client_confirmed && cf.counted && cf.rating === 4, `${label}: confirmed, counted, rated 4`);
+  ok(cf.destination_text === x.destination_text && cf.destination_lat === x.destination_lat && cf.destination_lng === x.destination_lng,
+     `${label}: destination untouched by the lifecycle`);
+  return x;
+}
+ok((await q('c1', `select * from places`)).length === 0, 'places starts EMPTY (nothing invented)');
+await fails('c1', `select admin_save_place(null, 'Market', -1.0, 34.8, true)`, 'forbidden');
+await fails('c1', `insert into places (name, lat, lng) values ('x', 0, 0)`, 'permission denied');
+await fails('c1', `update places set active = false`, 'permission denied');
+await fails('admin', `select admin_save_place(null, '   ', -1.0, 34.8, true)`, 'invalid_place');
+await fails('admin', `select admin_save_place(null, 'Far', 95, 34.8, true)`, 'invalid_place');
+await fails('admin', `select admin_save_place('00000000-0000-0000-0000-00000000dead', 'Ghost', -1, 34, true)`, 'not_found');
+const place = (await q('admin', `select * from admin_save_place(null, '  Kilgoris Market ', -1.0041, 34.8795, true)`))[0];
+ok(place.name === 'Kilgoris Market' && place.active, 'admin adds a place (name trimmed)');
+await q('admin', `select * from admin_save_place(null, 'Old stage', -1.001, 34.87, false)`);
+ok((await q('c1', `select * from places`)).length === 1, 'client sees only ACTIVE places');
+ok((await q('admin', `select * from places`)).length === 2, 'admin sees all places');
+const edited = (await q('admin', `select * from admin_save_place('${place.id}', 'Kilgoris Main Market', -1.0042, 34.8796, true)`))[0];
+ok(edited.name === 'Kilgoris Main Market' && edited.lat === -1.0042, 'admin edits a place');
+
+const A = await cycle('A no destination', 'c1', `select * from request_ride('${ID.b2}', -1.003, 34.876)`,
+  { destination_text: null, destination_lat: null, destination_lng: null, pickup_note: null });
+await cycle('B text only', 'c2', `select * from request_ride('${ID.b2}', -1.003, 34.876, 'behind the school')`,
+  { destination_text: 'behind the school', destination_lat: null, destination_lng: null });
+await cycle('C text + pin + landmark', 'c1',
+  `select * from request_ride('${ID.b2}', -1.003, 34.876, 'near the church', -1.0101, 34.8802, '  blue shop  ')`,
+  { destination_text: 'near the church', destination_lat: -1.0101, destination_lng: 34.8802, pickup_note: 'blue shop' });
+await cycle('D quick place', 'c2',
+  `select * from request_ride('${ID.b2}', -1.003, 34.876, '${edited.name}', ${edited.lat}, ${edited.lng})`,
+  { destination_text: 'Kilgoris Main Market', destination_lat: -1.0042, destination_lng: 34.8796 });
+await cycle('E pin only (no text)', 'c1', `select * from request_ride('${ID.b2}', -1.003, 34.876, null, -1.02, 34.89)`,
+  { destination_text: null, destination_lat: -1.02, destination_lng: 34.89 });
+ok(A.destination_text === null, 'A stored NULL, not an empty string');
+
+console.log('\n# destination never blocks a request, pick-up still does');
+async function lenient(sql, expect) {
+  await as('b2', () => db.query(`select set_availability(true, -1.0, 34.88)`));
+  const x = (await q('c1', sql))[0];
+  for (const [k, v] of Object.entries(expect)) ok(x[k] === v, `${sql.slice(0, 70)}… ${k}=${JSON.stringify(v)} (got ${JSON.stringify(x[k])})`);
+  await q('c1', `select cancel_ride('${x.id}')`);
+}
+await lenient(`select * from request_ride('${ID.b2}', -1.0, 34.88, '   ')`, { destination_text: null });
+await lenient(`select * from request_ride('${ID.b2}', -1.0, 34.88, 'x', -1.0, null)`, { destination_text: 'x', destination_lat: null, destination_lng: null });
+await lenient(`select * from request_ride('${ID.b2}', -1.0, 34.88, 'x', 123, 34.8)`, { destination_lat: null, destination_lng: null });
+await lenient(`select * from request_ride('${ID.b2}', -1.0, 34.88, 'x', -1.0, 999)`, { destination_lat: null, destination_lng: null });
+await lenient(`select * from request_ride('${ID.b2}', -1.0, 34.88, '${'z'.repeat(300)}', null, null, '${'n'.repeat(300)}')`, {});
+const long = (await db.query(`select destination_text, pickup_note from rides order by created_at desc limit 1`)).rows[0];
+ok(long.destination_text.length === 200 && long.pickup_note.length === 200, 'over-long text is cut, not rejected');
+await as('b2', () => db.query(`select set_availability(true, -1.0, 34.88)`));
+await fails('c1', `select request_ride('${ID.b2}', null, 34.88, 'market', -1.0, 34.8)`, 'invalid_location');
+await fails('c1', `select request_ride('${ID.b2}', -1.0, 999, 'market', -1.0, 34.8)`, 'invalid_location');
+
+console.log('\n# migration safety: existing rides survive, re-running is harmless');
+await db.exec(fs.readFileSync(path.join(here, '..', 'migrations', MIGRATIONS.at(-1)), 'utf8'));
+ok((await q('c1', `select * from places`)).length === 1, 're-running the migration keeps the places');
+{
+  const old = new PGlite();
+  await old.exec(`
+    create role anon nologin; create role authenticated nologin;
+    create schema auth; create table auth.users (id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated;
+    grant usage on schema public to anon, authenticated;
+    alter default privileges in schema public grant all on tables to anon, authenticated;
+    alter default privileges in schema public grant execute on functions to anon, authenticated;`);
+  await old.exec(fs.readFileSync(path.join(here, '..', 'migrations', MIGRATIONS[0]), 'utf8'));
+  await old.exec(`
+    insert into auth.users values ('${ID.b1}'), ('${ID.c1}');
+    insert into profiles (id, role, name, phone, language) values ('${ID.b1}','boda','Old Boda','+254700000001','sw'), ('${ID.c1}','client','Old Client','+254711000001','en');
+    insert into boda_profiles (user_id, plate) values ('${ID.b1}','KMFA 123A');
+    insert into rides (client_id, boda_id, status, pickup_lat, pickup_lng, destination_text, expires_at, client_name, boda_name, boda_plate)
+      values ('${ID.c1}','${ID.b1}','completed',-1.0,34.88,'Hospital', now(), 'Old Client','Old Boda','KMFA 123A');`);
+  for (const m of MIGRATIONS.slice(1)) await old.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8'));
+  const row = (await old.query(`select * from rides`)).rows[0];
+  ok(row.destination_text === 'Hospital' && row.destination_lat === null && row.destination_lng === null && row.pickup_note === null,
+     'a ride made before the migration is intact (new columns NULL)');
+  ok((await old.query(`select count(*)::int n from places`)).rows[0].n === 0, 'places empty after migrating a live database');
+  await old.close();
+}
 
 console.log('\n# admin');
 ok((await db.query(`select count(*)::int n from boda_daily_activity`)).rows[0].n > 0
