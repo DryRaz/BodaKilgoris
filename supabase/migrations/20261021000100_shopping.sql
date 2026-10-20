@@ -101,37 +101,36 @@ create table if not exists public.ride_items (
 );
 create index if not exists ride_items_ride_idx on public.ride_items (ride_id, position);
 
--- first catalogue (the admin edits it afterwards); only when the table is empty
-insert into public.catalog_items (name_en, name_sw, category, unit, sort_order)
-select v.* from (values
-  ('Sugar',            'Sukari',               'staples', 'kg',     10),
-  ('Maize flour',      'Unga',                 'staples', 'kg',     20),
-  ('Rice',             'Mchele',               'staples', 'kg',     30),
-  ('Cooking oil',      'Mafuta ya kupikia',    'staples', 'litre',  40),
-  ('Salt',             'Chumvi',               'staples', 'packet', 50),
-  ('Tea leaves',       'Majani ya chai',       'staples', 'packet', 60),
-  ('Bread',            'Mkate',                'staples', 'piece',  70),
-  ('Eggs',             'Mayai',                'staples', 'piece',  80),
-  ('Milk',             'Maziwa',               'staples', 'litre',  90),
-  ('Tomatoes',         'Nyanya',               'fresh',   'kg',    110),
-  ('Onions',           'Vitunguu',             'fresh',   'kg',    120),
-  ('Potatoes',         'Viazi',                'fresh',   'kg',    130),
-  ('Sukuma wiki',      'Sukuma wiki',          'fresh',   'bunch', 140),
-  ('Cabbage',          'Kabichi',              'fresh',   'piece', 150),
-  ('Bananas',          'Ndizi',                'fresh',   'bunch', 160),
-  ('Bar soap',         'Sabuni',               'home',    'piece', 210),
-  ('Washing powder',   'Omo',                  'home',    'packet',220),
-  ('Toilet paper',     'Karatasi ya choo',     'home',    'piece', 230),
-  ('Matches',          'Kibiriti',             'home',    'packet',240),
-  ('Candles',          'Mishumaa',             'home',    'packet',250),
-  ('Charcoal',         'Makaa',                'energy',  'kg',    310),
-  ('Paraffin',         'Mafuta ya taa',        'energy',  'litre', 320),
-  ('Gas refill',       'Gesi',                 'energy',  'piece', 330),
-  ('Drinking water',   'Maji ya kunywa',       'misc',    'litre', 410),
-  ('Airtime',          'Mkopo wa simu',        'misc',    'ksh',   420),
-  ('Painkillers',      'Dawa ya maumivu',      'misc',    'packet',430)
-) as v(name_en, name_sw, category, unit, sort_order)
-where not exists (select 1 from public.catalog_items);
+-- first catalogue (the admin edits it afterwards). Fixed ids + ON CONFLICT DO NOTHING: running this (or the
+-- seed in 20261022000000_catalog_seed_and_public_read.sql) again never duplicates, never resurrects a hidden article.
+insert into public.catalog_items (id, name_en, name_sw, category, unit, sort_order) values
+  ('c0a7a100-0000-4000-8000-000000000001'::uuid, 'Sugar', 'Sukari', 'staples', 'kg', 10),
+  ('c0a7a100-0000-4000-8000-000000000002'::uuid, 'Maize flour', 'Unga', 'staples', 'kg', 20),
+  ('c0a7a100-0000-4000-8000-000000000003'::uuid, 'Rice', 'Mchele', 'staples', 'kg', 30),
+  ('c0a7a100-0000-4000-8000-000000000004'::uuid, 'Cooking oil', 'Mafuta ya kupikia', 'staples', 'litre', 40),
+  ('c0a7a100-0000-4000-8000-000000000005'::uuid, 'Salt', 'Chumvi', 'staples', 'packet', 50),
+  ('c0a7a100-0000-4000-8000-000000000006'::uuid, 'Tea leaves', 'Majani ya chai', 'staples', 'packet', 60),
+  ('c0a7a100-0000-4000-8000-000000000007'::uuid, 'Bread', 'Mkate', 'staples', 'piece', 70),
+  ('c0a7a100-0000-4000-8000-000000000008'::uuid, 'Eggs', 'Mayai', 'staples', 'piece', 80),
+  ('c0a7a100-0000-4000-8000-000000000009'::uuid, 'Milk', 'Maziwa', 'staples', 'litre', 90),
+  ('c0a7a100-0000-4000-8000-000000000010'::uuid, 'Tomatoes', 'Nyanya', 'fresh', 'kg', 110),
+  ('c0a7a100-0000-4000-8000-000000000011'::uuid, 'Onions', 'Vitunguu', 'fresh', 'kg', 120),
+  ('c0a7a100-0000-4000-8000-000000000012'::uuid, 'Potatoes', 'Viazi', 'fresh', 'kg', 130),
+  ('c0a7a100-0000-4000-8000-000000000013'::uuid, 'Sukuma wiki', 'Sukuma wiki', 'fresh', 'bunch', 140),
+  ('c0a7a100-0000-4000-8000-000000000014'::uuid, 'Cabbage', 'Kabichi', 'fresh', 'piece', 150),
+  ('c0a7a100-0000-4000-8000-000000000015'::uuid, 'Bananas', 'Ndizi', 'fresh', 'bunch', 160),
+  ('c0a7a100-0000-4000-8000-000000000016'::uuid, 'Bar soap', 'Sabuni', 'home', 'piece', 210),
+  ('c0a7a100-0000-4000-8000-000000000017'::uuid, 'Washing powder', 'Omo', 'home', 'packet', 220),
+  ('c0a7a100-0000-4000-8000-000000000018'::uuid, 'Toilet paper', 'Karatasi ya choo', 'home', 'piece', 230),
+  ('c0a7a100-0000-4000-8000-000000000019'::uuid, 'Matches', 'Kibiriti', 'home', 'packet', 240),
+  ('c0a7a100-0000-4000-8000-000000000020'::uuid, 'Candles', 'Mishumaa', 'home', 'packet', 250),
+  ('c0a7a100-0000-4000-8000-000000000021'::uuid, 'Charcoal', 'Makaa', 'energy', 'kg', 310),
+  ('c0a7a100-0000-4000-8000-000000000022'::uuid, 'Paraffin', 'Mafuta ya taa', 'energy', 'litre', 320),
+  ('c0a7a100-0000-4000-8000-000000000023'::uuid, 'Gas refill', 'Gesi', 'energy', 'piece', 330),
+  ('c0a7a100-0000-4000-8000-000000000024'::uuid, 'Drinking water', 'Maji ya kunywa', 'misc', 'litre', 410),
+  ('c0a7a100-0000-4000-8000-000000000025'::uuid, 'Airtime', 'Mkopo wa simu', 'misc', 'ksh', 420),
+  ('c0a7a100-0000-4000-8000-000000000026'::uuid, 'Painkillers', 'Dawa ya maumivu', 'misc', 'packet', 430)
+on conflict do nothing;
 
 -- -----------------------------------------------------------------------------
 -- RLS: nobody writes directly (admin_save_catalog_item, request_shopping, shopping_set_item do)

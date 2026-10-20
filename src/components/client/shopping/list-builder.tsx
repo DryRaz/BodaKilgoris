@@ -18,7 +18,7 @@ export function ListBuilder({
 }: { lines: DraftLine[]; setLines: (lines: DraftLine[]) => void; onNext: () => void; onClear: () => void }) {
   const t = useTranslations('shopping');
   const { locale } = useLocaleContext();
-  const { items, loaded } = useCatalog();
+  const { items, loaded, error, retry } = useCatalog();
   const [query, setQuery] = useState('');
   const [custom, setCustom] = useState('');
 
@@ -63,7 +63,16 @@ export function ListBuilder({
       />
 
       {!loaded && <Loading />}
-      {loaded && groups.length === 0 && <Card className="text-center text-muted">{query ? t('noMatch') : t('catalogEmpty')}</Card>}
+      {/* never an empty screen: say so, offer a retry, and the "Other item" box below keeps working */}
+      {loaded && items.length === 0 && (
+        <Card className="space-y-3 border-2 border-accent-400 bg-warn-50 text-center" role="alert" data-testid="catalog-unavailable">
+          <p className="text-lg font-extrabold">{t('loadFailed')}</p>
+          <p className="text-sm">{t('loadFailedHint')}</p>
+          {error?.code && <p className="text-xs text-muted">({error.code})</p>}
+          <Button onClick={retry}>{t('retry')}</Button>
+        </Card>
+      )}
+      {loaded && items.length > 0 && groups.length === 0 && <Card className="text-center text-muted">{t('noMatch')}</Card>}
 
       {groups.map((g) => (
         <section key={g.category} className="space-y-2" aria-label={categoryName(g.category)}>

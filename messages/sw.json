@@ -503,7 +503,6 @@
       "ksh": "KSh"
     },
     "noMatch": "Hakuna bidhaa iliyopatikana. Iweke hapa chini kama “Bidhaa nyingine”.",
-    "catalogEmpty": "Orodha ya bidhaa ni tupu kwa sasa. Tumia “Bidhaa nyingine” hapa chini.",
     "less": "Punguza",
     "more": "Ongeza",
     "otherTitle": "Bidhaa nyingine",
@@ -576,7 +575,10 @@
     "problemDetails": "Tueleze zaidi (si lazima)",
     "cancelReport": "Rudi",
     "sendReport": "Tuma ripoti",
-    "problemSent": "Ripoti yako imetumwa. Asante."
+    "problemSent": "Ripoti yako imetumwa. Asante.",
+    "loadFailed": "Imeshindikana kupakia bidhaa, tafadhali jaribu tena.",
+    "loadFailedHint": "Bado unaweza kuandika bidhaa zako mwenyewe kwenye “Bidhaa nyingine” hapa chini.",
+    "retry": "Jaribu tena"
   },
   "shoppingBoda": {
     "badge": "Manunuzi",

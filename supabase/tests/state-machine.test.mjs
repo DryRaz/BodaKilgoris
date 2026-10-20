@@ -296,6 +296,41 @@ ok((await q('admin', `select * from catalog_items`)).length === 27, 'admin sees 
 const [first, second] = cat;
 await as('admin', () => db.query(`select admin_swap_catalog_order('${first.id}', '${second.id}')`));
 ok((await q('c1', `select name_en from catalog_items order by sort_order limit 1`))[0].name_en === second.name_en, 'admin reorders articles');
+// catalogue visibility for anonymous visitors + idempotent seed (20261022 migration)
+await db.exec(`set role anon`);
+const anonCat = (await db.query(`select * from catalog_items`)).rows;
+ok(anonCat.length === 26 && anonCat.every((c) => c.active), 'anonymous visitors read the ACTIVE articles only (the deactivated one is hidden)');
+try { await db.query(`insert into catalog_items (name_en, name_sw, category) values ('x','y','z')`); ok(false, 'anon insert'); } catch (e) { ok(/permission denied/.test(e.message), 'anon cannot write the catalogue'); }
+try { await db.query(`update catalog_items set active = false`); ok(false, 'anon update'); } catch (e) { ok(/permission denied/.test(e.message), 'anon cannot update the catalogue'); }
+try { await db.query(`select * from ride_items`); ok(false, 'anon ride_items'); } catch (e) { ok(/permission denied/.test(e.message), 'anonymous visitors cannot read order lines'); }
+await db.exec(`reset role`);
+const sugarBefore = cat.find((c) => c.name_en === 'Sugar');
+await as('admin', () => db.query(`select admin_save_catalog_item('${sugarBefore.id}', 'Sugar (white)', 'Sukari nyeupe', 'staples', 'kg', true)`));
+const candles = cat.find((c) => c.name_en === 'Candles');
+await as('admin', () => db.query(`select admin_save_catalog_item('${candles.id}', 'Candles', 'Mishumaa', 'home', 'packet', false)`));
+const seedSql = fs.readFileSync(path.join(here, '..', 'migrations', MIGRATIONS.at(-1)), 'utf8');
+await db.exec(seedSql);
+await db.exec(seedSql);
+const total = (await db.query(`select count(*)::int n from catalog_items`)).rows[0].n;
+ok(total === 27, `seed run twice: no duplicate (26 seed + 1 admin article = 27, got ${total})`);
+ok((await db.query(`select count(*)::int n from catalog_items where name_en = 'Sugar'`)).rows[0].n === 0, 'an article the admin renamed is not re-created by the seed');
+ok((await db.query(`select active from catalog_items where name_en = 'Candles'`)).rows[0].active === false, 'an article the admin hid stays hidden after the seed');
+await as('admin', () => db.query(`select admin_save_catalog_item('${sugarBefore.id}', 'Sugar', 'Sukari', 'staples', 'kg', true)`));
+await as('admin', () => db.query(`select admin_save_catalog_item('${candles.id}', 'Candles', 'Mishumaa', 'home', 'packet', true)`));
+// a catalogue seeded earlier with RANDOM ids must not be duplicated either
+{
+  const old = new PGlite();
+  await old.exec(`create role anon nologin; create role authenticated nologin; create schema auth; create table auth.users (id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated; grant usage on schema public to anon, authenticated;
+    alter default privileges in schema public grant all on tables to anon, authenticated; alter default privileges in schema public grant execute on functions to anon, authenticated;`);
+  for (const m of MIGRATIONS.slice(0, -1)) await old.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8'));
+  await old.exec(`delete from catalog_items; insert into catalog_items (name_en, name_sw, category, unit, sort_order) values ('Sugar', 'Sukari', 'staples', 'kg', 10), ('Rice', 'Mchele', 'staples', 'kg', 30)`);
+  await old.exec(seedSql);
+  const n = (await old.query(`select count(*)::int n from catalog_items`)).rows[0].n;
+  ok(n === 26, `catalogue seeded earlier with random ids: seed completes it without duplicates (${n})`);
+  await old.close();
+}
 const sugar = cat.find((c) => c.name_en === 'Sugar'), flour = cat.find((c) => c.name_en === 'Maize flour'), tea = cat.find((c) => c.name_en === 'Tea leaves');
 const items = (...x) => JSON.stringify(x).replace(/'/g, "''");
 

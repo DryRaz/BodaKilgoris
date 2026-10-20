@@ -71,7 +71,8 @@ Les jours sont calculés en fuseau **Africa/Nairobi**.
    1. **`20261016000000_init.sql`** (tables, RLS, fonctions, realtime, bucket photos) ;
    2. **`20261020000000_optional_destination_places.sql`** (destination facultative + coordonnées facultatives, repère de prise en charge, table `places` **vide**, `request_ride` mise à jour). Idempotent, sans effet sur les courses existantes ;
    3. **`20261021000000_shopping_status_values.sql`**, **puis, dans une exécution séparée**, **`20261021000100_shopping.sql`** (« Shopping list » : statuts, `catalog_items` + catalogue de départ, `ride_items`, `request_shopping`, étapes du Boda, signalement, fonctions admin). Les deux fichiers doivent être lancés l'un après l'autre, pas ensemble (une nouvelle valeur d'enum ne peut pas être utilisée dans la transaction qui l'ajoute). Idempotents, sans effet sur les courses existantes (elles deviennent `type = 'ride'`).
-   Sur un projet déjà en service, exécutez seulement les fichiers qui manquent.
+   4. **`20261022000000_catalog_seed_and_public_read.sql`** : (re)garnit le catalogue avec les 26 articles de départ (idempotent : ne duplique rien, ne réactive pas un article que vous avez masqué ou renommé) et autorise la **lecture** des articles actifs aux visiteurs connectés **ou non** (l'écriture reste réservée à l'admin).
+   Sur un projet déjà en service, exécutez seulement les fichiers qui manquent. **`npm run check:db`** (lecture seule, clé publique) dit lesquelles manquent : sans elles l'écran « Shopping list » affiche « Impossible de charger les articles » (code `PGRST205` = table absente) et la demande de course échoue.
 3. **Authentication → Providers → Email** : laissez le fournisseur Email **activé**, mais :
    - désactivez **« Allow new users to sign up »** (les comptes sont créés uniquement par le serveur) ;
    - la confirmation d'email n'est pas nécessaire (les comptes sont créés déjà confirmés).

@@ -22,7 +22,7 @@ How to review: edit `messages/sw.json` directly (keep the `{placeholders}` exact
 | Cash | pesa taslimu | cash (many people just say "cash") |
 | Plate number | Nambari ya pikipiki | Namba ya pikipiki |
 
-Total strings: 549
+Total strings: 551
 
 ## common
 
@@ -552,7 +552,6 @@ _Shown to people when something fails: must be short and not blaming._
 | `shopping.units.bunch` | bunch | fungu |
 | `shopping.units.ksh` | KSh | KSh |
 | `shopping.noMatch` | No article found. Add it below as “Other item”. | Hakuna bidhaa iliyopatikana. Iweke hapa chini kama “Bidhaa nyingine”. |
-| `shopping.catalogEmpty` | The catalogue is empty for now. Use “Other item” below. | Orodha ya bidhaa ni tupu kwa sasa. Tumia “Bidhaa nyingine” hapa chini. |
 | `shopping.less` | Less | Punguza |
 | `shopping.more` | More | Ongeza |
 | `shopping.otherTitle` | Other item | Bidhaa nyingine |
@@ -618,6 +617,9 @@ _Shown to people when something fails: must be short and not blaming._
 | `shopping.cancelReport` | Back | Rudi |
 | `shopping.sendReport` | Send the report | Tuma ripoti |
 | `shopping.problemSent` | Your report was sent. Thank you. | Ripoti yako imetumwa. Asante. |
+| `shopping.loadFailed` | Could not load the articles, please try again. | Imeshindikana kupakia bidhaa, tafadhali jaribu tena. |
+| `shopping.loadFailedHint` | You can still write your own articles in “Other item” below. | Bado unaweza kuandika bidhaa zako mwenyewe kwenye “Bidhaa nyingine” hapa chini. |
+| `shopping.retry` | Try again | Jaribu tena |
 
 ## shoppingBoda
 
