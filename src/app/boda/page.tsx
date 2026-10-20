@@ -9,6 +9,7 @@ import { AvailabilityToggle } from '@/components/boda/availability-toggle';
 import { BodaActiveRide } from '@/components/boda/active-ride';
 import { IncomingRequest } from '@/components/boda/incoming-request';
 import { useGeoConsent } from '@/components/geo-consent';
+import { PhotoUploader } from '@/components/photo-picker';
 import { useToast } from '@/components/toast';
 import { Banner, Button, Card, Stars } from '@/components/ui';
 import { useBodaTracking } from '@/hooks/useBodaTracking';
@@ -73,15 +74,18 @@ export default function BodaHomePage() {
   const myPos = tracking.lastFix;
 
   // ---- own account row: approval / suspension / auto-offline arrive live ----
+  // depends on the id (a string), not on the `user` object: that object is a new instance after every
+  // session read, which used to tear the Realtime channel down and rebuild it on each refresh.
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
     const supabase = getSupabase();
     const channel = supabase
-      .channel(`my-boda-${user.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'boda_profiles', filter: `user_id=eq.${user.id}` }, () => void refresh())
+      .channel(`my-boda-${userId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'boda_profiles', filter: `user_id=eq.${userId}` }, () => void refresh())
       .subscribe();
     return () => void supabase.removeChannel(channel);
-  }, [user, refresh]);
+  }, [userId, refresh]);
 
   // ---- alert on every new request ----
   const seen = useRef(new Set<string>());
@@ -141,6 +145,14 @@ export default function BodaHomePage() {
         right={<Link href="/settings" aria-label="Settings" className="grid size-11 place-items-center rounded-full text-2xl active:bg-brand-50">⚙️</Link>}
       />
       <Page>
+        {boda && !boda.photo_url && (
+          <Card className="space-y-3">
+            <h2 className="text-xl font-extrabold">{t('addPhotoTitle')}</h2>
+            <p className="text-base">{t('addPhotoBody')}</p>
+            <PhotoUploader onUploaded={() => void refresh()} />
+          </Card>
+        )}
+
         {boda?.status === 'pending' && (
           <Card className="space-y-3 text-center">
             <div className="text-5xl" aria-hidden>⏳</div>

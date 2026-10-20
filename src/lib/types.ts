@@ -32,7 +32,12 @@ export interface Ride {
   status: RideStatus;
   pickup_lat: number;
   pickup_lng: number;
+  /** Optional pick-up landmark typed by the client ("in front of the blue shop"). */
+  pickup_note: string | null;
+  /** All three destination fields are optional: Kilgoris clients describe places, they rarely drop pins. */
   destination_text: string | null;
+  destination_lat: number | null;
+  destination_lng: number | null;
   requested_at: string;
   expires_at: string;
   accepted_at: string | null;
@@ -58,6 +63,15 @@ export interface Ride {
   client_phone: string | null;
   boda_phone: string | null;
   created_at: string;
+}
+
+/** A frequent destination the admin maintains (public.places). */
+export interface Place {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  active: boolean;
 }
 
 /** Row of the available_bodas() RPC. */

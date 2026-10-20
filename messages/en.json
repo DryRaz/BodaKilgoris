@@ -71,8 +71,6 @@
     "plate": "Motorbike plate number",
     "plateHint": "Example: KMFA 123A",
     "photo": "Your photo",
-    "photoTake": "Take or choose a photo",
-    "photoChange": "Change photo",
     "photoHint": "A clear photo of your face. Clients see it.",
     "login": "Log in",
     "register": "Create my account",
@@ -89,7 +87,20 @@
     "adminLoginTitle": "Admin login",
     "pinMismatch": "The two PINs are not the same.",
     "registered": "Account created. It is waiting for approval.",
-    "loggingIn": "Logging in…"
+    "loggingIn": "Logging in…",
+    "photoCamera": "Take a photo",
+    "photoRetake": "Take another photo",
+    "photoGallery": "Choose from gallery",
+    "photoProcessing": "Preparing your photo…",
+    "photoUploading": "Sending your photo…",
+    "photoSaved": "Photo saved ✓",
+    "photoRetry": "Try sending again",
+    "photoLater": "Add a photo later",
+    "photoContinue": "Continue",
+    "photoStepTitle": "Add your photo",
+    "accountCreated": "Your account is created ✓ You can add your photo now, or later from the home page.",
+    "photoRestarted": "The app restarted while the camera was open. Your account is safe. Please try the photo again.",
+    "draftRestored": "We kept what you typed. Please enter your PIN again."
   },
   "settings": {
     "title": "Settings",
@@ -119,7 +130,6 @@
     "incomingTitle": "New ride request",
     "client": "Client",
     "destination": "Destination",
-    "noDestination": "Not given",
     "pickupPoint": "Pick-up point",
     "distanceFromYou": "{distance} from you",
     "expiresIn": "Expires in {time}",
@@ -147,7 +157,12 @@
     "noRating": "No rating yet",
     "tapAvailable": "Tap “I am available” when you are ready for rides.",
     "clientCancelled": "{name} cancelled the request.",
-    "requestExpired": "A request expired."
+    "requestExpired": "A request expired.",
+    "addPhotoTitle": "Add your photo",
+    "addPhotoBody": "Clients like to see who they ride with. It also helps the admin approve you.",
+    "destinationToClarify": "Destination to be confirmed with the client",
+    "destinationOnMap": "Shown on the map",
+    "pickupNote": "Pick-up landmark"
   },
   "client": {
     "hello": "Hello, {name}",
@@ -163,8 +178,8 @@
     "useMyLocation": "Use my location",
     "locating": "Finding you…",
     "tapMap": "Tap the map to place the pick-up pin.",
-    "destinationLabel": "Where are you going?",
-    "destinationPlaceholder": "Example: Kilgoris Market",
+    "destinationLabel": "Where are you going? (optional)",
+    "destinationPlaceholder": "Landmark, area or place (e.g. near the market)",
     "waitingTitle": "Waiting for {name}…",
     "waitingBody": "Your request expires in {time}.",
     "cancelRequest": "Cancel the request",
@@ -187,7 +202,19 @@
     "stars": "{count, plural, one {# star} other {# stars}}",
     "thanks": "Thank you! The ride is confirmed.",
     "newRide": "Back to the map",
-    "refreshList": "Refresh"
+    "refreshList": "Refresh",
+    "destinationHint": "You can leave this empty and tell the Boda when he arrives.",
+    "placesLabel": "Quick places",
+    "placeOnMap": "Place on the map",
+    "placingHint": "Tap the map where you want to go.",
+    "cancelPlacing": "Cancel",
+    "destinationPinned": "Destination placed on the map",
+    "removePin": "Remove",
+    "pickupNoteLabel": "Pick-up landmark (optional)",
+    "pickupNoteHint": "Helps the Boda find you.",
+    "pickupNotePlaceholder": "Example: in front of the blue shop",
+    "gpsFallback": "We could not get your GPS position. Tap the map to place your pick-up pin.",
+    "gpsImprecise": "Your GPS is not very precise (about {meters} m). Check the pin, or tap the map to move it."
   },
   "ride": {
     "status": {
@@ -226,7 +253,8 @@
       "overview": "Overview",
       "bodas": "Bodas",
       "rides": "Rides",
-      "map": "Live map"
+      "map": "Live map",
+      "places": "Places"
     },
     "overview": {
       "question": "How many real rides go through the app?",
@@ -306,6 +334,27 @@
       "title": "Available Bodas",
       "none": "No Boda is available right now.",
       "count": "{count, plural, =0 {No Boda available} one {# Boda available} other {# Bodas available}}"
+    },
+    "places": {
+      "title": "Frequent places",
+      "intro": "Clients see these as quick buttons under the destination field. Add the real places of Kilgoris. Deactivating a place only hides it; past rides are not changed.",
+      "addTitle": "Add a place",
+      "editTitle": "Edit this place",
+      "name": "Name",
+      "namePlaceholder": "Example: Kilgoris Market",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "coordsHint": "Tap the map to set the position, or paste coordinates like -1.0035, 34.8767.",
+      "add": "Add the place",
+      "saveChanges": "Save changes",
+      "cancelEdit": "Cancel",
+      "saved": "Saved",
+      "empty": "No places yet. Add the first one above.",
+      "active": "Active",
+      "inactive": "Hidden",
+      "edit": "Edit",
+      "deactivate": "Hide",
+      "activate": "Show again"
     }
   },
   "errors": {
@@ -341,6 +390,9 @@
     "invalid_location": "The location is not valid.",
     "invalid_price": "The price is not valid.",
     "invalid_rating": "The rating must be from 1 to 5.",
-    "not_found": "Not found."
+    "not_found": "Not found.",
+    "photo_unreadable": "We could not read this photo. Please take or choose another one.",
+    "photo_upload_failed": "The photo could not be saved. Please try again.",
+    "invalid_place": "Please enter a name and valid coordinates."
   }
 }

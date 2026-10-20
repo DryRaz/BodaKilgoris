@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { AppHeader, Loading, Page } from '@/components/app-header';
 import { homeFor, useAuth } from '@/components/auth-provider';
 import { LanguageSwitcher } from '@/components/language';
+import { PhotoUploader } from '@/components/photo-picker';
 import { InstallPrompt } from '@/components/pwa';
 import { useToast } from '@/components/toast';
 import { Button, Card } from '@/components/ui';
@@ -17,7 +18,8 @@ export default function SettingsPage() {
   const tg = useTranslations('geo');
   const tl = useTranslations('language');
   const tc = useTranslations('common');
-  const { profile, loading, refresh, signOut } = useAuth();
+  const { profile, boda, loading, refresh, signOut } = useAuth();
+  const ta = useTranslations('auth');
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -49,6 +51,13 @@ export default function SettingsPage() {
               <p className="font-semibold">{profile.name}</p>
               {profile.phone && <p className="text-muted">{formatPhone(profile.phone)}</p>}
             </Card>
+
+            {profile.role === 'boda' && (
+              <Card className="space-y-3">
+                <h2 className="text-lg font-extrabold">{ta('photo')}</h2>
+                <PhotoUploader currentUrl={boda?.photo_url} onUploaded={() => void refresh()} />
+              </Card>
+            )}
 
             {profile.role !== 'admin' && (
               <Card className="space-y-3">

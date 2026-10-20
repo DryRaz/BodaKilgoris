@@ -60,6 +60,7 @@ button { cursor: pointer; touch-action: manipulation; }
 .bm-boda .bm-pin { border-color: var(--color-brand-600); }
 .bm-bodaSelected .bm-pin { border-color: var(--color-accent-500); background: var(--color-warn-50); transform: scale(1.15); }
 .bm-pickup .bm-pin { border-color: var(--color-danger); background: var(--color-danger-50); }
+.bm-destination .bm-pin { border-color: var(--color-brand-600); background: var(--color-brand-50); }
 .bm-me .bm-pin { width: 22px; height: 22px; border-color: #1d4ed8; background: #3b82f6; font-size: 0; }
 .bm-label {
   margin-top: 2px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;

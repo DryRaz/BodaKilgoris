@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react';
 import { DEFAULT_ZOOM, KILGORIS_CENTER } from '@/lib/constants';
 import type { LatLng } from '@/lib/geo';
 
-export type MarkerKind = 'boda' | 'bodaSelected' | 'pickup' | 'me';
+export type MarkerKind = 'boda' | 'bodaSelected' | 'pickup' | 'destination' | 'me';
 export interface MapMarker {
   id: string;
   lat: number;
@@ -29,7 +29,7 @@ export interface LeafletMapProps {
   className?: string;
 }
 
-const GLYPH: Record<MarkerKind, string> = { boda: '🏍️', bodaSelected: '🏍️', pickup: '📍', me: '' };
+const GLYPH: Record<MarkerKind, string> = { boda: '🏍️', bodaSelected: '🏍️', pickup: '📍', destination: '🏁', me: '' };
 
 function buildIcon(m: MapMarker): L.DivIcon {
   const root = document.createElement('div');
@@ -70,6 +70,7 @@ export default function LeafletMap({
       center: [start.lat, start.lng],
       zoom: view?.zoom ?? DEFAULT_ZOOM,
       zoomControl: interactive,
+      zoomAnimation: false, // an animated zoom still running when the map is removed throws '_leaflet_pos' errors; also lighter on cheap phones
       dragging: interactive,
       touchZoom: interactive,
       scrollWheelZoom: interactive,
@@ -92,6 +93,7 @@ export default function LeafletMap({
     const liveMarkers = live.current;
     return () => {
       ro.disconnect();
+      map.stop(); // cancel a running pan/zoom animation: its timers would touch the removed map ('_leaflet_pos' errors)
       map.remove();
       mapRef.current = null;
       layer.current = null;

@@ -2,69 +2,138 @@
 
 import { useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
-import { Button } from './ui';
+import { useErrorMessage } from '@/hooks/useErrorMessage';
+import { errMessage, logClient } from '@/lib/clientlog';
+import { compressPhoto } from '@/lib/image-compress';
+import { uploadBodaPhoto } from '@/lib/photo-upload';
+import { Banner, Button } from './ui';
 
-const MAX_SIDE = 640;
+type Phase = 'idle' | 'compressing' | 'uploading' | 'failed' | 'done';
 
-/** Shrinks a phone photo (often 3-6 MB) to ~100 KB before upload: slow networks, cheap data. */
-async function compress(file: File): Promise<File> {
-  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
-  const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, 'image/jpeg', 0.8));
-  if (!blob) throw new Error('compress_failed');
-  return new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-}
-
-export function PhotoPicker({ value, onChange }: { value: File | null; onChange: (f: File | null) => void }) {
+/**
+ * Photo capture + compression + upload, built to survive low-RAM Android phones:
+ *  - the NATIVE camera app is opened through <input type="file" capture>; no getUserMedia, no video
+ *    stream inside the page (that is what gets the page killed)
+ *  - the picture is shrunk to <= 800 px / ~150 KB right after capture, BEFORE anything is displayed
+ *  - the preview is an object URL of the small JPEG only, revoked when replaced or unmounted
+ *  - a failed upload keeps the small file in memory: "Try again" needs no new picture
+ *
+ * `onBeforeCamera` runs synchronously just before the camera opens (save your draft there).
+ */
+export function PhotoUploader({
+  currentUrl,
+  onUploaded,
+  onBeforeCamera,
+  onCaptureDone,
+}: {
+  currentUrl?: string | null;
+  onUploaded: (url: string) => void;
+  onBeforeCamera?: () => void;
+  onCaptureDone?: () => void;
+}) {
   const t = useTranslations('auth');
-  const input = useRef<HTMLInputElement>(null);
+  const errMsg = useErrorMessage();
+  const camera = useRef<HTMLInputElement>(null);
+  const gallery = useRef<HTMLInputElement>(null);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [small, setSmall] = useState<File | null>(null); // the compressed photo, kept for retries
   const [preview, setPreview] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [savedUrl, setSavedUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
+  // one object URL at a time, always for the compressed file, always released
   useEffect(() => {
-    if (!value) return setPreview(null);
-    const url = URL.createObjectURL(value);
+    if (!small) return setPreview(null);
+    const url = URL.createObjectURL(small);
     setPreview(url);
     return () => URL.revokeObjectURL(url);
-  }, [value]);
+  }, [small]);
+
+  async function upload(file: File) {
+    setPhase('uploading');
+    setError(null);
+    try {
+      const { photoUrl } = await uploadBodaPhoto(file);
+      setSavedUrl(photoUrl);
+      setSmall(null);
+      setPhase('done');
+      onUploaded(photoUrl);
+    } catch (err) {
+      logClient('photo.upload_gave_up', { bytes: file.size, error: errMessage(err) });
+      setError(errMsg(err));
+      setPhase('failed');
+    }
+  }
+
+  async function onPicked(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = ''; // lets the same picture be picked again and releases the reference to the original
+    onCaptureDone?.();
+    if (!file) {
+      logClient('photo.capture_empty', {}, 'warn'); // camera closed without a picture
+      return;
+    }
+    setPhase('compressing');
+    setError(null);
+    let compact: File;
+    try {
+      const started = performance.now();
+      compact = await compressPhoto(file);
+      logClient('photo.compressed', { from: file.size, to: compact.size, ms: Math.round(performance.now() - started) }, 'info');
+    } catch (err) {
+      logClient('photo.compress_failed', { bytes: file.size, type: file.type, error: errMessage(err) });
+      setError(errMsg(err));
+      setPhase('failed');
+      return;
+    }
+    setSmall(compact);
+    await upload(compact);
+  }
+
+  const busy = phase === 'compressing' || phase === 'uploading';
+  const shown = preview ?? savedUrl ?? currentUrl ?? null;
+  const hasPhoto = phase === 'done' || !!currentUrl;
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-dashed border-line bg-white text-4xl">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {preview ? <img src={preview} alt="" className="size-full object-cover" /> : <span aria-hidden>🧑🏾</span>}
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        <div className="grid size-24 shrink-0 place-items-center overflow-hidden rounded-2xl border-2 border-dashed border-line bg-white text-4xl">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {shown ? <img src={shown} alt="" className="size-full object-cover" /> : <span aria-hidden>🧑🏾</span>}
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <Button
+            variant="secondary"
+            disabled={busy}
+            onClick={() => {
+              onBeforeCamera?.();
+              camera.current?.click();
+            }}
+            className="w-full"
+          >
+            📷 {hasPhoto ? t('photoRetake') : t('photoCamera')}
+          </Button>
+          <Button variant="ghost" disabled={busy} onClick={() => gallery.current?.click()} className="w-full">
+            🖼️ {t('photoGallery')}
+          </Button>
+        </div>
       </div>
-      <div className="min-w-0 flex-1 space-y-2">
-        <Button variant="secondary" loading={busy} onClick={() => input.current?.click()} className="w-full">
-          {value ? t('photoChange') : t('photoTake')}
-        </Button>
-        <p className="text-sm text-muted">{t('photoHint')}</p>
-      </div>
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        capture="user"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (!file) return;
-          setBusy(true);
-          try {
-            onChange(await compress(file));
-          } catch {
-            onChange(file.size < 900_000 ? file : null);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
+      <p className="text-sm text-muted">{t('photoHint')}</p>
+
+      {phase === 'compressing' && <Banner kind="info">{t('photoProcessing')}</Banner>}
+      {phase === 'uploading' && <Banner kind="info">{t('photoUploading')}</Banner>}
+      {phase === 'done' && <Banner kind="success">{t('photoSaved')}</Banner>}
+      {phase === 'failed' && (
+        <div className="space-y-2">
+          {error && <Banner kind="error">{error}</Banner>}
+          {small && <Button className="w-full" onClick={() => void upload(small)}>{t('photoRetry')}</Button>}
+        </div>
+      )}
+
+      {/* native camera app (front camera) */}
+      <input ref={camera} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => void onPicked(e.currentTarget)} />
+      {/* gallery / file picker */}
+      <input ref={gallery} type="file" accept="image/*" className="hidden" onChange={(e) => void onPicked(e.currentTarget)} />
     </div>
   );
 }
