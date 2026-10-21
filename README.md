@@ -72,7 +72,7 @@ Les jours sont calculés en fuseau **Africa/Nairobi**.
    2. **`20261020000000_optional_destination_places.sql`** (destination facultative + coordonnées facultatives, repère de prise en charge, table `places` **vide**, `request_ride` mise à jour). Idempotent, sans effet sur les courses existantes ;
    3. **`20261021000000_shopping_status_values.sql`**, **puis, dans une exécution séparée**, **`20261021000100_shopping.sql`** (« Shopping list » : statuts, `catalog_items` + catalogue de départ, `ride_items`, `request_shopping`, étapes du Boda, signalement, fonctions admin). Les deux fichiers doivent être lancés l'un après l'autre, pas ensemble (une nouvelle valeur d'enum ne peut pas être utilisée dans la transaction qui l'ajoute). Idempotents, sans effet sur les courses existantes (elles deviennent `type = 'ride'`).
    4. **`20261022000000_catalog_seed_and_public_read.sql`** : (re)garnit le catalogue avec les 26 articles de départ (idempotent : ne duplique rien, ne réactive pas un article que vous avez masqué ou renommé) et autorise la **lecture** des articles actifs aux visiteurs connectés **ou non** (l'écriture reste réservée à l'admin).
-   Sur un projet déjà en service, exécutez seulement les fichiers qui manquent. **`npm run check:db`** (lecture seule, clé publique) dit lesquelles manquent : sans elles l'écran « Shopping list » affiche « Impossible de charger les articles » (code `PGRST205` = table absente) et la demande de course échoue.
+   Sur un projet déjà en service, exécutez seulement les fichiers qui manquent. Si vous avez déjà créé `catalog_items` à la main, lancez quand même `20261021000100_shopping.sql` : il **s'adapte** à la table existante (ajoute les colonnes manquantes comme `created_at`, ajoute la clé primaire si besoin, active la RLS, remplace toute policy posée à la main par les deux policies de lecture, complète le catalogue **sans doublon**) et refuse avec un message clair si `id` n'est pas un `uuid`. **`npm run check:db`** (lecture seule, clé publique) dit lesquelles manquent : sans elles l'écran « Shopping list » affiche « Impossible de charger les articles » (code `PGRST205` = table absente) et la demande de course échoue.
 3. **Authentication → Providers → Email** : laissez le fournisseur Email **activé**, mais :
    - désactivez **« Allow new users to sign up »** (les comptes sont créés uniquement par le serveur) ;
    - la confirmation d'email n'est pas nécessaire (les comptes sont créés déjà confirmés).
@@ -107,6 +107,29 @@ npm run dev                       # http://localhost:3000
 2. Ajoutez les 4 variables d'environnement ci-dessus (Production + Preview).
 3. Déployez. Ouvrez l'URL sur un téléphone Android avec Chrome : « Installer l'application » apparaît (manifest + service worker inclus).
 4. Créez le compte admin (`npm run create-admin` en local pointant sur le même projet Supabase) et connectez-vous sur `/admin/login`.
+
+---
+
+### 3.5 Quelle base pour quel environnement, et comment vérifier
+
+| Environnement | Base ciblée |
+|---|---|
+| Local (`npm run dev` / `start`) | celle de `.env.local` (copie de `.env.example`) |
+| Vercel **Production** et **Preview** | celle des variables `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` définies dans Vercel pour chaque scope (Production / Preview). Elles peuvent désigner **le même projet** ou deux projets différents : vérifiez les deux scopes. |
+
+**Les migrations SQL ne sont jamais appliquées automatiquement** : ni `npm run build`, ni le déploiement Vercel ne touchent à la base. Fusionner une PR déploie le code, pas le schéma. Après chaque déploiement qui ajoute un fichier dans `supabase/migrations/`, exécutez-le à la main dans le SQL Editor **du projet utilisé par l'environnement concerné**, puis :
+
+```bash
+# lecture seule, clé publique : quelles migrations manquent ?
+NEXT_PUBLIC_SUPABASE_URL=… NEXT_PUBLIC_SUPABASE_ANON_KEY=… npm run check:db
+
+# lecture seule + schéma complet (colonnes, fonctions, statuts) avec un client de test
+APP_URL=https://votre-app.vercel.app SUPABASE_URL=… SUPABASE_ANON_KEY=… npm run smoke:prod
+
+# + une commande Shopping complète puis une course complète (ÉCRIT dans cette base : lignes « SMOKE TEST »)
+# nécessite un Boda de test déjà approuvé
+SMOKE_BODA_PHONE=07… SMOKE_BODA_PIN=1234 [mêmes variables] npm run smoke:prod -- --write
+```
 
 ---
 

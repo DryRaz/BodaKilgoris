@@ -33,8 +33,8 @@ for (const [table, migration] of checks) {
 const cat = await probe('catalog_items');
 if (cat.exists) {
   console.log(cat.anonDenied
-    ? 'note     catalog_items: anonymous read not granted yet → run 20261022000000_catalog_seed_and_public_read.sql'
+    ? 'note     catalog_items: anonymous read not granted yet → run 20261021000100_shopping.sql, then 20261022000000_catalog_seed_and_public_read.sql'
     : cat.anonRows > 0 ? 'ok       catalog_items has articles visible to anonymous visitors'
-      : 'WARNING  catalog_items is readable but returns NO active article → run 20261022000000_catalog_seed_and_public_read.sql');
+      : 'WARNING  catalog_items is readable but returns NO active article (empty table, or row-level security without a read policy) → run 20261021000100_shopping.sql (it adapts to an existing table and adds the policies), then 20261022000000_catalog_seed_and_public_read.sql');
 }
 process.exit(missing ? 1 : 0);

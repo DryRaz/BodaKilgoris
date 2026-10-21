@@ -3,7 +3,7 @@
 -- Run AFTER 20261021000100_shopping.sql. Safe to run any number of times:
 --   * the 26 starting articles use fixed ids and ON CONFLICT DO NOTHING (an article the admin renamed, reordered or
 --     hidden is never duplicated or re-activated); the NOT EXISTS guard also covers a catalogue that was seeded
---     earlier with random ids (same category + same English name = already there).
+--     earlier or by hand with random ids (same English name = already there).
 --   * clients — signed in or not — can READ active articles; only the admin can read hidden ones or write anything.
 -- =============================================================================
 insert into public.catalog_items (id, name_en, name_sw, category, unit, active, sort_order)
@@ -36,8 +36,7 @@ from (values
   ('c0a7a100-0000-4000-8000-000000000025'::uuid, 'Airtime', 'Mkopo wa simu', 'misc', 'ksh', 420),
   ('c0a7a100-0000-4000-8000-000000000026'::uuid, 'Painkillers', 'Dawa ya maumivu', 'misc', 'packet', 430)
 ) as v(id, name_en, name_sw, category, unit, sort_order)
-where not exists (
-  select 1 from public.catalog_items c where c.category = v.category and lower(c.name_en) = lower(v.name_en))
+where not exists (select 1 from public.catalog_items c where lower(btrim(c.name_en)) = lower(v.name_en))
 on conflict do nothing;
 
 -- read access: anonymous visitors see active articles only; signed-in users the same, the admin everything

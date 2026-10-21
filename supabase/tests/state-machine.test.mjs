@@ -563,6 +563,91 @@ ok(probs.length === 4 && probs.every((x) => Array.isArray(x.items) && x.items.le
 await fails('c1', `select admin_shopping_overview()`, 'forbidden');
 await fails('b2', `select admin_shopping_problems()`, 'forbidden');
 
+console.log('\n# production-like: catalog_items created BY HAND before the shopping migration');
+async function freshDb(upTo) {
+  const d = new PGlite();
+  await d.exec(`create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls; create schema auth;
+    create table auth.users (id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+    grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated; grant usage on schema public to anon, authenticated;
+    alter default privileges in schema public grant all on tables to anon, authenticated;
+    alter default privileges in schema public grant all on sequences to anon, authenticated;
+    alter default privileges in schema public grant execute on functions to anon, authenticated;`);
+  for (const m of MIGRATIONS.slice(0, upTo)) await d.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8'));
+  return d;
+}
+const rest = MIGRATIONS.slice(3); // shopping migration + seed (the enum file, index 2, is run first)
+async function applyRest(d) { for (const m of rest) await d.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8')); }
+const asUser = async (d, id, sql) => { await d.exec(`set role authenticated; select set_config('request.jwt.claim.sub','${id}',false);`); try { return (await d.query(sql)).rows; } finally { await d.exec(`reset role; select set_config('request.jwt.claim.sub','',false);`); } };
+
+// A: like the real one (uuid pk, 7 columns, no created_at), RLS on, a permissive hand-made policy, their own categories
+{
+  const d = await freshDb(3);
+  await d.exec(`
+    create table public.catalog_items (id uuid primary key default gen_random_uuid(), name_en text, name_sw text, category text, unit text, active boolean default true, sort_order int);
+    alter table public.catalog_items enable row level security;
+    create policy "allow all" on public.catalog_items for all using (true) with check (true);
+    grant all on public.catalog_items to anon, authenticated;
+    insert into public.catalog_items (name_en, name_sw, category, unit, sort_order) values
+      ('Sugar', 'Sukari', 'Alimentation de base', 'kg', 1), ('Sukuma wiki', 'Sukuma wiki', 'Frais', 'bunch', 2), ('Fish', 'Samaki', 'Frais', 'kg', 3);`);
+  ok((await d.query(`select count(*)::int n from catalog_items`)).rows[0].n === 3, 'A: hand-made catalogue with 3 rows');
+  await applyRest(d);
+  const rows = (await d.query(`select * from catalog_items`)).rows;
+  ok(rows.length === 27, `A: seed completes the catalogue without duplicating Sugar / Sukuma wiki (27 = 24 new + 3 yours, got ${rows.length})`);
+  ok(rows.filter((r) => r.name_en === 'Sugar').length === 1 && rows.find((r) => r.name_en === 'Sugar').category === 'Alimentation de base', 'A: your rows are untouched (names, categories)');
+  ok(rows.every((r) => r.active === true && r.created_at), 'A: created_at added, nothing deactivated');
+  const pol = (await d.query(`select policyname from pg_policies where tablename = 'catalog_items' order by 1`)).rows.map((r) => r.policyname).join();
+  ok(pol === 'catalog_read,catalog_read_anon', `A: the permissive hand-made policy is replaced by the two read policies (${pol})`);
+  await d.exec(`set role anon`); const anonN = (await d.query(`select count(*)::int n from catalog_items`)).rows[0].n; await d.exec(`reset role`);
+  ok(anonN === 27, 'A: anonymous visitors read the active articles');
+  const cid = '00000000-0000-0000-0000-0000000000c1', bid = '00000000-0000-0000-0000-0000000000b1', aid = '00000000-0000-0000-0000-0000000000a1';
+  await d.exec(`insert into auth.users values ('${cid}'), ('${bid}'), ('${aid}');
+    insert into profiles (id, role, name, phone, language) values ('${cid}','client','Client','+254711000001','en'), ('${bid}','boda','Boda','+254700000001','en'), ('${aid}','admin','Admin',null,'en');
+    insert into boda_profiles (user_id, plate, status) values ('${bid}','KMFA 123A','approved');`);
+  let blocked = 0;
+  for (const sql of [`insert into catalog_items (name_en, name_sw, category) values ('x','y','z')`, `update catalog_items set active = false`, `delete from catalog_items`]) {
+    try { await asUser(d, cid, sql); } catch (e) { if (/permission denied/.test(e.message)) blocked++; }
+  }
+  ok(blocked === 3, 'A: a client can neither insert, update nor delete articles (the hand-made grants are revoked)');
+  await asUser(d, bid, `select set_availability(true, -1.0, 34.88)`);
+  const hand = (await d.query(`select id from catalog_items where name_en = 'Fish'`)).rows[0].id;
+  const o = (await asUser(d, cid, `select * from request_shopping('${bid}', -1.0, 34.88, '[{"catalog_item_id":"${hand}","quantity":2},{"custom_name":"Krackers"}]'::jsonb)`))[0];
+  const li = (await asUser(d, cid, `select name_en, unit, quantity, is_custom from ride_items where ride_id = '${o.id}' order by position`));
+  ok(li.length === 2 && li[0].name_en === 'Fish' && li[0].unit === 'kg' && li[0].quantity === 2 && li[1].is_custom, 'A: a client creates an order with an article from the hand-made catalogue (lines written, snapshot taken)');
+  ok((await asUser(d, bid, `select id from ride_items where ride_id = '${o.id}'`)).length === 2, 'A: the addressed Boda reads the lines');
+  ok((await asUser(d, bid, `select count(*)::int n from catalog_items`))[0].n === 27, 'A: signed-in users read the catalogue');
+  let direct = false; try { await asUser(d, cid, `insert into ride_items (ride_id, custom_name, is_custom) values ('${o.id}', 'forged', true)`); } catch (e) { direct = /permission denied/.test(e.message); }
+  ok(direct, 'A: direct inserts into ride_items are refused (only request_shopping writes lines)');
+  const before = (await d.query(`select count(*)::int n from catalog_items`)).rows[0].n;
+  await applyRest(d);
+  ok((await d.query(`select count(*)::int n from catalog_items`)).rows[0].n === before, 'A: running the migrations a second time changes nothing');
+  const admin = (await asUser(d, aid, `select count(*)::int n from catalog_items`))[0].n;
+  ok(admin === before, 'A: admin sees every article');
+  await d.close();
+}
+// B: no primary key, no default, missing columns, NULL flags
+{
+  const d = await freshDb(3);
+  await d.exec(`create table public.catalog_items (id uuid, name_en text, name_sw text, category text, active boolean);
+    insert into public.catalog_items (id, name_en, name_sw, category, active) values (gen_random_uuid(), 'Fish', 'Samaki', 'fresh', null), (gen_random_uuid(), 'Rice', '', 'staples', true);`);
+  await applyRest(d);
+  const rows = (await d.query(`select * from catalog_items`)).rows;
+  ok(rows.length === 27 && rows.filter((r) => r.name_en === 'Rice').length === 1, `B: table without key/default/unit/sort_order is completed (${rows.length} rows, no duplicate Rice)`);
+  ok(rows.find((r) => r.name_en === 'Fish').active === true && rows.find((r) => r.name_en === 'Fish').unit === 'piece', 'B: NULL flags and missing columns get sane values');
+  ok((await d.query(`select count(*)::int n from pg_index where indrelid = 'public.catalog_items'::regclass and indisprimary`)).rows[0].n === 1, 'B: a primary key on id was added');
+  await d.close();
+}
+// C: an id of another type is refused with a clear message, nothing changed
+{
+  const d = await freshDb(3);
+  await d.exec(`create table public.catalog_items (id bigint primary key, name_en text, name_sw text, category text, unit text, active boolean default true, sort_order int); insert into public.catalog_items values (1, 'Fish', 'Samaki', 'fresh', 'kg', true, 1);`);
+  let msg = '';
+  try { await applyRest(d); } catch (e) { msg = e.message; }
+  ok(/catalog_items\.id is of type bigint/.test(msg), `C: bigint id -> explicit error (${msg.slice(0, 80)})`);
+  ok((await d.query(`select count(*)::int n from catalog_items`)).rows[0].n === 1, 'C: the hand-made table is left as it was');
+  await d.close();
+}
+
 console.log('\n# admin');
 ok((await db.query(`select count(*)::int n from boda_daily_activity`)).rows[0].n > 0
    && (await q('c1', `select * from boda_daily_activity`)).length === 0, 'activity rows exist but are admin-only');
