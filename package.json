@@ -17,7 +17,9 @@
     "test:db": "node supabase/tests/state-machine.test.mjs",
     "seed": "node scripts/seed.mjs",
     "simulate": "node scripts/simulate.mjs",
-    "create-admin": "node scripts/create-admin.mjs"
+    "create-admin": "node scripts/create-admin.mjs",
+    "check:db": "node scripts/check-db.mjs",
+    "smoke:prod": "node scripts/prod-smoke.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

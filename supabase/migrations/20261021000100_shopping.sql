@@ -79,6 +79,48 @@ create table if not exists public.catalog_items (
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+-- ---- adapt to a catalog_items table that already exists (e.g. created by hand): add what is missing, keep every row ----
+do $$
+declare
+  v_type text;
+begin
+  select data_type into v_type from information_schema.columns
+   where table_schema = 'public' and table_name = 'catalog_items' and column_name = 'id';
+  if v_type is null then
+    alter table public.catalog_items add column id uuid not null default gen_random_uuid();
+    v_type := 'uuid';
+  end if;
+  if v_type <> 'uuid' then
+    raise exception 'catalog_items.id is of type %, the shopping tables need uuid. Nothing was changed: send the table definition.', v_type;
+  end if;
+  alter table public.catalog_items alter column id set default gen_random_uuid();
+
+  -- ride_items.catalog_item_id references catalog_items(id): id must be unique
+  if not exists (
+    select 1 from pg_index i
+     where i.indrelid = 'public.catalog_items'::regclass and (i.indisprimary or i.indisunique) and i.indnatts = 1
+       and (select a.attname from pg_attribute a where a.attrelid = i.indrelid and a.attnum = i.indkey[0]) = 'id') then
+    if exists (select 1 from pg_index where indrelid = 'public.catalog_items'::regclass and indisprimary) then
+      alter table public.catalog_items add constraint catalog_items_id_key unique (id);
+    else
+      alter table public.catalog_items add primary key (id);
+    end if;
+  end if;
+
+  alter table public.catalog_items add column if not exists name_en    text;
+  alter table public.catalog_items add column if not exists name_sw    text;
+  alter table public.catalog_items add column if not exists category   text;
+  alter table public.catalog_items add column if not exists unit       text;
+  alter table public.catalog_items add column if not exists active     boolean;
+  alter table public.catalog_items add column if not exists sort_order integer;
+  alter table public.catalog_items add column if not exists created_at timestamptz not null default now();
+  update public.catalog_items set active = true where active is null;
+  update public.catalog_items set unit = 'piece' where unit is null or btrim(unit) = '';
+  update public.catalog_items set sort_order = 0 where sort_order is null;
+  alter table public.catalog_items alter column active set default true;
+  alter table public.catalog_items alter column unit set default 'piece';
+  alter table public.catalog_items alter column sort_order set default 0;
+end $$;
 create index if not exists catalog_items_idx on public.catalog_items (active, category, sort_order);
 
 create table if not exists public.ride_items (
@@ -101,56 +143,73 @@ create table if not exists public.ride_items (
 );
 create index if not exists ride_items_ride_idx on public.ride_items (ride_id, position);
 
--- first catalogue (the admin edits it afterwards); only when the table is empty
-insert into public.catalog_items (name_en, name_sw, category, unit, sort_order)
-select v.* from (values
-  ('Sugar',            'Sukari',               'staples', 'kg',     10),
-  ('Maize flour',      'Unga',                 'staples', 'kg',     20),
-  ('Rice',             'Mchele',               'staples', 'kg',     30),
-  ('Cooking oil',      'Mafuta ya kupikia',    'staples', 'litre',  40),
-  ('Salt',             'Chumvi',               'staples', 'packet', 50),
-  ('Tea leaves',       'Majani ya chai',       'staples', 'packet', 60),
-  ('Bread',            'Mkate',                'staples', 'piece',  70),
-  ('Eggs',             'Mayai',                'staples', 'piece',  80),
-  ('Milk',             'Maziwa',               'staples', 'litre',  90),
-  ('Tomatoes',         'Nyanya',               'fresh',   'kg',    110),
-  ('Onions',           'Vitunguu',             'fresh',   'kg',    120),
-  ('Potatoes',         'Viazi',                'fresh',   'kg',    130),
-  ('Sukuma wiki',      'Sukuma wiki',          'fresh',   'bunch', 140),
-  ('Cabbage',          'Kabichi',              'fresh',   'piece', 150),
-  ('Bananas',          'Ndizi',                'fresh',   'bunch', 160),
-  ('Bar soap',         'Sabuni',               'home',    'piece', 210),
-  ('Washing powder',   'Omo',                  'home',    'packet',220),
-  ('Toilet paper',     'Karatasi ya choo',     'home',    'piece', 230),
-  ('Matches',          'Kibiriti',             'home',    'packet',240),
-  ('Candles',          'Mishumaa',             'home',    'packet',250),
-  ('Charcoal',         'Makaa',                'energy',  'kg',    310),
-  ('Paraffin',         'Mafuta ya taa',        'energy',  'litre', 320),
-  ('Gas refill',       'Gesi',                 'energy',  'piece', 330),
-  ('Drinking water',   'Maji ya kunywa',       'misc',    'litre', 410),
-  ('Airtime',          'Mkopo wa simu',        'misc',    'ksh',   420),
-  ('Painkillers',      'Dawa ya maumivu',      'misc',    'packet',430)
-) as v(name_en, name_sw, category, unit, sort_order)
-where not exists (select 1 from public.catalog_items);
+-- first catalogue (the admin edits it afterwards). Fixed ids + ON CONFLICT DO NOTHING + "an article with this English
+-- name is already there" guard: running this again, or on a catalogue filled by hand, never duplicates anything and
+-- never resurrects a hidden / renamed article.
+insert into public.catalog_items (id, name_en, name_sw, category, unit, active, sort_order)
+select v.id, v.name_en, v.name_sw, v.category, v.unit, true, v.sort_order
+from (values
+  ('c0a7a100-0000-4000-8000-000000000001'::uuid, 'Sugar', 'Sukari', 'staples', 'kg', 10),
+  ('c0a7a100-0000-4000-8000-000000000002'::uuid, 'Maize flour', 'Unga', 'staples', 'kg', 20),
+  ('c0a7a100-0000-4000-8000-000000000003'::uuid, 'Rice', 'Mchele', 'staples', 'kg', 30),
+  ('c0a7a100-0000-4000-8000-000000000004'::uuid, 'Cooking oil', 'Mafuta ya kupikia', 'staples', 'litre', 40),
+  ('c0a7a100-0000-4000-8000-000000000005'::uuid, 'Salt', 'Chumvi', 'staples', 'packet', 50),
+  ('c0a7a100-0000-4000-8000-000000000006'::uuid, 'Tea leaves', 'Majani ya chai', 'staples', 'packet', 60),
+  ('c0a7a100-0000-4000-8000-000000000007'::uuid, 'Bread', 'Mkate', 'staples', 'piece', 70),
+  ('c0a7a100-0000-4000-8000-000000000008'::uuid, 'Eggs', 'Mayai', 'staples', 'piece', 80),
+  ('c0a7a100-0000-4000-8000-000000000009'::uuid, 'Milk', 'Maziwa', 'staples', 'litre', 90),
+  ('c0a7a100-0000-4000-8000-000000000010'::uuid, 'Tomatoes', 'Nyanya', 'fresh', 'kg', 110),
+  ('c0a7a100-0000-4000-8000-000000000011'::uuid, 'Onions', 'Vitunguu', 'fresh', 'kg', 120),
+  ('c0a7a100-0000-4000-8000-000000000012'::uuid, 'Potatoes', 'Viazi', 'fresh', 'kg', 130),
+  ('c0a7a100-0000-4000-8000-000000000013'::uuid, 'Sukuma wiki', 'Sukuma wiki', 'fresh', 'bunch', 140),
+  ('c0a7a100-0000-4000-8000-000000000014'::uuid, 'Cabbage', 'Kabichi', 'fresh', 'piece', 150),
+  ('c0a7a100-0000-4000-8000-000000000015'::uuid, 'Bananas', 'Ndizi', 'fresh', 'bunch', 160),
+  ('c0a7a100-0000-4000-8000-000000000016'::uuid, 'Bar soap', 'Sabuni', 'home', 'piece', 210),
+  ('c0a7a100-0000-4000-8000-000000000017'::uuid, 'Washing powder', 'Omo', 'home', 'packet', 220),
+  ('c0a7a100-0000-4000-8000-000000000018'::uuid, 'Toilet paper', 'Karatasi ya choo', 'home', 'piece', 230),
+  ('c0a7a100-0000-4000-8000-000000000019'::uuid, 'Matches', 'Kibiriti', 'home', 'packet', 240),
+  ('c0a7a100-0000-4000-8000-000000000020'::uuid, 'Candles', 'Mishumaa', 'home', 'packet', 250),
+  ('c0a7a100-0000-4000-8000-000000000021'::uuid, 'Charcoal', 'Makaa', 'energy', 'kg', 310),
+  ('c0a7a100-0000-4000-8000-000000000022'::uuid, 'Paraffin', 'Mafuta ya taa', 'energy', 'litre', 320),
+  ('c0a7a100-0000-4000-8000-000000000023'::uuid, 'Gas refill', 'Gesi', 'energy', 'piece', 330),
+  ('c0a7a100-0000-4000-8000-000000000024'::uuid, 'Drinking water', 'Maji ya kunywa', 'misc', 'litre', 410),
+  ('c0a7a100-0000-4000-8000-000000000025'::uuid, 'Airtime', 'Mkopo wa simu', 'misc', 'ksh', 420),
+  ('c0a7a100-0000-4000-8000-000000000026'::uuid, 'Painkillers', 'Dawa ya maumivu', 'misc', 'packet', 430)
+) as v(id, name_en, name_sw, category, unit, sort_order)
+where not exists (select 1 from public.catalog_items c where lower(btrim(c.name_en)) = lower(v.name_en))
+on conflict do nothing;
 
 -- -----------------------------------------------------------------------------
 -- RLS: nobody writes directly (admin_save_catalog_item, request_shopping, shopping_set_item do)
 -- -----------------------------------------------------------------------------
 alter table public.catalog_items enable row level security;
 alter table public.ride_items    enable row level security;
+
+-- Any policy that was added by hand (e.g. a permissive "all" policy) is removed: the rules below are the only ones.
+do $$
+declare p record;
+begin
+  for p in select policyname, tablename from pg_policies
+            where schemaname = 'public' and tablename in ('catalog_items', 'ride_items') loop
+    execute format('drop policy %I on public.%I', p.policyname, p.tablename);
+  end loop;
+end $$;
+
 revoke all on public.catalog_items from anon, authenticated;
 revoke all on public.ride_items    from anon, authenticated;
-grant select on public.catalog_items to authenticated;
+grant select on public.catalog_items to anon, authenticated;
 grant select on public.ride_items    to authenticated;
 
-drop policy if exists catalog_read on public.catalog_items;
+-- catalogue: everybody (signed in or not) reads the ACTIVE articles; the admin also reads the hidden ones;
+-- nobody has INSERT / UPDATE / DELETE (admin_save_catalog_item, which checks is_admin(), is the only way in)
 create policy catalog_read on public.catalog_items
   for select to authenticated using (active or public.is_admin());
+create policy catalog_read_anon on public.catalog_items
+  for select to anon using (active);
 
 -- The lines of an order are visible to the client who made it, to the Boda it was addressed to (from the moment
--- it is requested: that is what he must see to accept) and to the admin. Nobody else.
--- (the sub-select goes through rides_read, which is exactly that rule)
-drop policy if exists ride_items_read on public.ride_items;
+-- it is requested: that is what he must see to accept) and to the admin. Nobody else. Lines are written by
+-- request_shopping() (SECURITY DEFINER, checks the caller is a client) and shopping_set_item(), never directly.
 create policy ride_items_read on public.ride_items
   for select to authenticated using (
     exists (select 1 from public.rides r

@@ -144,6 +144,7 @@ export function BodasBrowser({
           p_pickup_note: pickupNote.trim() || null,
         });
     if (error) {
+      console.error('[boda] request failed', { message: error.message, code: error.code, details: error.details, hint: error.hint });
       toast.show(te(error), 'error');
       void reload();
     } else {

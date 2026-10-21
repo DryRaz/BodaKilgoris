@@ -503,7 +503,6 @@
       "ksh": "KSh"
     },
     "noMatch": "No article found. Add it below as “Other item”.",
-    "catalogEmpty": "The catalogue is empty for now. Use “Other item” below.",
     "less": "Less",
     "more": "More",
     "otherTitle": "Other item",
@@ -576,7 +575,10 @@
     "problemDetails": "Tell us more (optional)",
     "cancelReport": "Back",
     "sendReport": "Send the report",
-    "problemSent": "Your report was sent. Thank you."
+    "problemSent": "Your report was sent. Thank you.",
+    "loadFailed": "Could not load the articles, please try again.",
+    "loadFailedHint": "You can still write your own articles in “Other item” below.",
+    "retry": "Try again"
   },
   "shoppingBoda": {
     "badge": "Shopping",
