@@ -15,6 +15,9 @@ export interface Profile {
   phone: string | null;
   language: string;
   geo_consent_at: string | null;
+  /** First-order privacy notice: when it was first shown / when the client ticked "I understand". */
+  notice_shown_at?: string | null;
+  notice_accepted_at?: string | null;
   created_at: string;
 }
 

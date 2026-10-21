@@ -8,7 +8,7 @@ import { Banner, Card, TextInput } from '@/components/ui';
 import { useFormat } from '@/hooks/useFormat';
 import { nairobiDay } from '@/lib/clock';
 import { getSupabase } from '@/lib/supabase/client';
-import type { Ride } from '@/lib/types';
+import type { Ride, RideItem } from '@/lib/types';
 
 const LIMIT = 500;
 
@@ -23,6 +23,23 @@ export default function AdminRidesPage() {
   const [onlyCounted, setOnlyCounted] = useState(false);
   const [onlySuspect, setOnlySuspect] = useState(false);
   const [rows, setRows] = useState<Ride[] | null>(null);
+  // /admin/rides?ride=<id>: one order opened from an alert (read from the URL on the client; no Suspense needed)
+  const [focus, setFocus] = useState<{ ride: Ride | null; items: RideItem[]; missing: boolean } | null>(null);
+
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('ride');
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return;
+    void (async () => {
+      const supabase = getSupabase();
+      const [r, i] = await Promise.all([
+        supabase.from('rides').select('*').eq('id', id).maybeSingle(),
+        supabase.from('ride_items').select('*').eq('ride_id', id).order('position'),
+      ]);
+      if (r.error) console.error('[rides] focus ride', { message: r.error.message, code: r.error.code, details: r.error.details, hint: r.error.hint });
+      if (i.error) console.error('[rides] focus items', { message: i.error.message, code: i.error.code, details: i.error.details, hint: i.error.hint });
+      setFocus({ ride: (r.data as Ride | null) ?? null, items: (i.data ?? []) as RideItem[], missing: !r.error && !r.data });
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     let q = getSupabase()
@@ -58,6 +75,28 @@ export default function AdminRidesPage() {
           ⬇ {t('exportCsv')}
         </a>
       </div>
+
+      {focus && (
+        <Card className="space-y-2 border-2 border-brand-600" data-testid="focus-ride">
+          {focus.ride ? (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-extrabold">{focus.ride.client_name} → {focus.ride.boda_name}</p>
+                <RideStatusBadge status={focus.ride.status} />
+              </div>
+              <p className="text-sm text-muted">{format.dateTime(new Date(focus.ride.requested_at), { dateStyle: 'short', timeStyle: 'short' })}</p>
+              {focus.ride.client_note && <p className="rounded-xl bg-canvas p-3 text-base">“{focus.ride.client_note}”</p>}
+              {focus.items.length > 0 && (
+                <ul className="list-disc space-y-0.5 pl-5">
+                  {focus.items.map((it) => <li key={it.id}>{it.quantity} × {it.custom_name ?? it.name_en ?? it.name_sw}</li>)}
+                </ul>
+              )}
+            </>
+          ) : (
+            <p className="text-muted">{t('rideNotFound')}</p>
+          )}
+        </Card>
+      )}
 
       <Card className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <label className="space-y-1 text-sm font-semibold">
