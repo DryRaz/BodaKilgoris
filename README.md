@@ -168,6 +168,20 @@ SMOKE_BODA_PHONE=07… SMOKE_BODA_PIN=1234 [mêmes variables] npm run smoke:prod
 - **Aucune donnée de paiement.**
 - `/admin` est protégé par `proxy.ts` (session + rôle) **et** par RLS (`is_admin()`) sur chaque requête.
 
+### 5bis. Alertes admin privées (mots sensibles)
+
+Quand une commande contient un mot de la liste (ex. « 2 bottles of Tusker »), l'admin reçoit une **alerte privée**. **Rien n'est jamais bloqué** : la commande est envoyée, traitée, comptée et exportée exactement comme avant, et le client comme le Boda ne voient aucune différence.
+
+- **Détection en base** (migration `20261023000000_admin_alerts.sql`) : triggers `AFTER INSERT` sur `ride_items` (articles libres) et `rides` (note du client d'une commande Shopping). Mot entier ou suite de mots entiers, après `normalize_item_name()` des deux côtés (« gin » ✓, « ginger » ✗, « M-Pesa » = « m pesa »). Pluriels non reconnus : ajouter le pluriel comme mot si besoin. Idempotent (`UNIQUE` + `ON CONFLICT DO NOTHING` : le même mot dans la même commande ne crée qu'une alerte).
+- **Une erreur de détection ne peut pas casser une commande** : tout est dans un bloc `BEGIN … EXCEPTION WHEN OTHERS` (un `RAISE WARNING` + une ligne dans `private.error_log`), et la fonction est légère (index, pas de boucle réseau).
+- **Invisible pour les clients et les Bodas** : tables dans le schéma `private` (non exposé par l'API : l'API répond `PGRST205/PGRST106`), aucun droit pour `anon`/`authenticated`, RLS admin seule, **aucune publication Realtime** (les événements `DELETE` ne sont pas filtrés par RLS et révéleraient l'existence de la table). L'admin passe par des fonctions `SECURITY DEFINER` qui vérifient `is_admin()`. Aucune colonne ajoutée à `rides` → l'export CSV ne peut pas en contenir ; les alertes ne sont dans aucun compteur public.
+- **Écrans admin** : onglet **Alertes** (badge rouge du nombre de nouvelles, bandeau sur l'accueil, petit toast à chaque nouvelle ; liste récentes d'abord avec aperçu une ligne + détail au toucher, appeler / WhatsApp, lien vers la commande, « 3e alerte alcool en 30 jours », actions Vu / Traité / Ignorer + note privée, filtres, vue par client) et onglet **Paramètres** (interrupteur général, par catégorie, par mot ; durée de conservation ; ajout de mot ; bouton **Tester un texte**).
+- **Pas de Realtime pour le badge, volontairement** : il est rafraîchi toutes les 10 s (un entier, seulement onglet visible) pour ne pas exposer l'existence de la table. Si vous préférez l'instantané : un canal Realtime *Broadcast* privé alimenté par un trigger est possible, au prix de plus de configuration.
+- **Confidentialité** : tâche quotidienne de rétention (`private.alerts_retention()`, déclenchée au plus toutes les 20 h par `sweep_rides()`, ou par `supabase/optional_alerts_cron.sql` avec pg_cron) : supprime les alertes traitées/ignorées plus vieilles que `alerts_retention_days` (90 par défaut), efface le texte et la note des vieilles alertes encore ouvertes, garde les compteurs agrégés (`private.alert_daily_counts`). Avis affiché **une fois**, avant le premier envoi d'un client (jamais bloquant ; case « J'ai compris » → `profiles.notice_accepted_at`), et page **Confidentialité** (`/privacy`, lien dans les réglages).
+- **Hypothèses à connaître** : le dépôt ne contenait ni `blocked_terms`, ni `normalize_item_name`, ni `promote_enabled`/« promotion automatique », ni écran Paramètres admin, ni `error_log` ; ils ont été **créés** par cette migration (liste de 85 mots fournie, par catégorie). Il n'y a donc rien à casser côté promotion ; les alertes sont indépendantes. Les mots de la catégorie *Santé* et *Insulte* sont **désactivés** au départ (`alert_enabled = false`) : l'admin les active dans Paramètres.
+- **Appliquer en production** : la migration `20261023000000_admin_alerts.sql` est idempotente. Si l'éditeur SQL automatisé refuse une partie (instructions `DELETE`/`DROP`), collez `supabase/apply/3_alerts_retention.sql` (fonction de rétention) dans le SQL Editor Supabase.
+- **À proposer (non implémenté)** : un e-mail de résumé à l'admin (ex. quotidien, via une Edge Function Supabase + Resend/SMTP, ou le SMTP de Supabase Auth) — simple et fiable, sans push ni message à des tiers.
+
 ### Limites connues (à connaître avant de décider)
 
 1. **Client sans mot de passe (choix du brief)** : connaître le téléphone d'un client suffit pour ouvrir son compte sur un autre appareil. Impact limité (il ne voit les données de personne d'autre), mais c'est de l'usurpation possible. À renforcer (OTP SMS) quand le budget le permet.
@@ -192,7 +206,7 @@ SMOKE_BODA_PHONE=07… SMOKE_BODA_PIN=1234 [mêmes variables] npm run smoke:prod
 
 ### ⚠ Traductions swahili « à relire »
 
-**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (549 textes). Priorités de relecture :
+**Toutes les traductions swahili sont un premier jet non relu par un locuteur natif** (swahili simple, parlé). La liste complète, clé par clé avec l'anglais en regard, est dans **[`docs/SWAHILI_REVIEW.md`](docs/SWAHILI_REVIEW.md)** (639 textes). Priorités de relecture :
 
 | Priorité | Clés | Pourquoi |
 |---|---|---|
@@ -204,6 +218,8 @@ SMOKE_BODA_PHONE=07… SMOKE_BODA_PIN=1234 [mêmes variables] npm run smoke:prod
 | 1 | **Nouveaux (Shopping list)** : tout `shopping.*` (écran de choix « Safari » / « Orodha ya manunuzi », catégories, unités, statuts, **avertissement de paiement `shopping.payNotice`**, **message sur les factures `shopping.receiptsNotice`**, motifs de problème `shopping.problems.*`) et `shoppingBoda.*` (dont le **bandeau factures `shoppingBoda.receiptsBanner`**, les cases à cocher et les 5 boutons d'étape) | Textes qui engagent le comportement de l'argent et des reçus : doivent être parfaitement compris |
 | 2 | Noms d'articles du catalogue (`name_sw` dans la table `catalog_items`, graine de la migration) | « sukari, unga, mchele… » : à confirmer / corriger dans `/admin/catalog` |
 | 2 | `notify.shopping*`, `notify.delivering`, `notify.deliveredConfirm`, `ride.status.shopping/purchased/delivering`, `errors.empty_list` … `errors.already_reported` | Notifications et erreurs de la commande |
+| 1 | **Nouveaux (alertes admin)** : `privacy.notice` (avis affiché au client — texte légal), `privacy.more`, `privacy.understood` | Compréhension par les clients |
+| 3 | `admin.alerts.*`, `admin.settings.*`, `errors.invalid_term/term_exists/invalid_setting/invalid_alert` | Vu par l'admin seulement |
 | 3 | `admin.*` (dont `admin.places.*`, `admin.catalog.*`, `admin.shopping.*`, `errors.invalid_place`) | Uniquement vu par l'admin |
 
 Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis `npm run i18n:check && npm run i18n:review`.
@@ -214,7 +230,8 @@ Pour corriger : éditez `messages/sw.json` (en gardant les `{variables}`), puis 
 
 | Commande | Ce qu'elle vérifie |
 |---|---|
-| `npm run test:db` | Exécute **toutes les migrations** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin, **destination facultative (aucune / texte / texte + épingle / lieu fréquent / épingle seule : cycle complet de chacune), lieux fréquents (droits, RLS), migration sur une base contenant déjà des courses** (261 assertions, dont tout le cycle Shopping : RLS des articles et du téléphone, étapes, reçus bloquants côté base, signalements, comptage et auto-confirmation, statistiques admin) |
+| `npm run test:db` | Exécute **toutes les migrations** dans un Postgres embarqué (PGlite) : RLS (anon / client / Boda / admin), machine d'états, comptage, drapeaux suspects, auto-confirmation, expiration, Bodas silencieux, fonctions admin, **destination facultative (aucune / texte / texte + épingle / lieu fréquent / épingle seule : cycle complet de chacune), lieux fréquents (droits, RLS), migration sur une base contenant déjà des courses** (287 assertions, dont tout le cycle Shopping : RLS des articles et du téléphone, étapes, reçus bloquants côté base, signalements, comptage et auto-confirmation, statistiques admin) |
+| `node supabase/tests/alerts.test.mjs` (inclus dans `test:db`) | Alertes admin : détection (mot entier, 2 mots, idempotence), interrupteurs, erreur de détection sans effet sur la commande, **aucune lecture possible par un client / un Boda / anon**, rétention, avis, et que rien d'autre n'a bougé (97 assertions) |
 | `npm run typecheck` / `npm run lint` | Types (dont clés de traduction) et ESLint |
 | `npm run i18n:check` | Cohérence EN / SW |
 

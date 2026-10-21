@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PrivacyNotice, usePrivacyNotice } from '@/components/client/privacy-notice';
 import { Map } from '@/components/map/Map';
 import { useToast } from '@/components/toast';
 import { Banner, Button, Card, Field, Stars, TextInput } from '@/components/ui';
@@ -48,6 +49,7 @@ export function BodasBrowser({
   const toast = useToast();
   const fmt = useFormat();
 
+  const notice = usePrivacyNotice();
   const { bodas, loaded, reload } = useAvailableBodas(true);
   const [pickup, setPickup] = useState<Pickup | null>(null);
   const [viewKey, setViewKey] = useState('init');
@@ -148,6 +150,7 @@ export function BodasBrowser({
       toast.show(te(error), 'error');
       void reload();
     } else {
+      notice.markSent();
       onRequested((data as { id?: string } | null)?.id);
     }
     setRequesting(null);
@@ -280,6 +283,7 @@ export function BodasBrowser({
       )}
 
       {shopping && <Banner kind="warn">{ts('payNotice')}</Banner>}
+      {notice.visible && <PrivacyNotice onAccept={() => void notice.record(true)} onClose={() => void notice.record(false)} />}
 
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-extrabold">{t('bodasNow')} ({list.length})</h2>

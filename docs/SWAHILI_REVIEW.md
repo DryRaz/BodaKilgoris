@@ -22,7 +22,7 @@ How to review: edit `messages/sw.json` directly (keep the `{placeholders}` exact
 | Cash | pesa taslimu | cash (many people just say "cash") |
 | Plate number | Nambari ya pikipiki | Namba ya pikipiki |
 
-Total strings: 551
+Total strings: 639
 
 ## common
 
@@ -327,6 +327,8 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.nav.places` | Places | Maeneo |
 | `admin.nav.shopping` | Shopping | Manunuzi |
 | `admin.nav.catalog` | Catalogue | Orodha ya bidhaa |
+| `admin.nav.alerts` | Alerts | Tahadhari |
+| `admin.nav.settings` | Settings | Mipangilio |
 | `admin.overview.question` | How many real rides go through the app? | Ni safari ngapi za kweli zinapita kwenye programu? |
 | `admin.overview.counted` | Counted rides | Safari zilizohesabiwa |
 | `admin.overview.countedHint` | Confirmed by both the Boda and the client | Zimethibitishwa na dereva na mteja wote wawili |
@@ -395,6 +397,7 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.rides.noRides` | No rides in this period. | Hakuna safari katika kipindi hiki. |
 | `admin.rides.showing` | Showing {count} rides | Safari {count} zinaonyeshwa |
 | `admin.rides.limitReached` | Only the latest {count} are shown. Narrow the dates or export the CSV. | Safari {count} za mwisho tu ndizo zinaonyeshwa. Punguza tarehe au pakua CSV. |
+| `admin.rides.rideNotFound` | This order was not found. | Oda hii haikupatikana. |
 | `admin.map.title` | Available Bodas | Boda zilizo tayari |
 | `admin.map.none` | No Boda is available right now. | Hakuna Boda iliyo tayari sasa hivi. |
 | `admin.map.count` | {count, plural, =0 {No Boda available} one {# Boda available} other {# Bodas available}} | {count, plural, =0 {Hakuna Boda iliyo tayari} one {Boda # iko tayari} other {Boda # ziko tayari}} |
@@ -473,6 +476,81 @@ _Used only by the admin: lower priority, but numbers/terms should be consistent.
 | `admin.shopping.footer` | No money goes through the app: the Boda advances it and the client repays on delivery. | Hakuna pesa inayopita kwenye programu: Boda anatoa kwanza na mteja anamlipa akifikishiwa. |
 | `admin.shopping.line` | {orders} orders · {counted} counted | maagizo {orders} · yaliyohesabiwa {counted} |
 | `admin.shopping.receiptsLine` | receipts kept {kept}% · shown {shown}% · without receipt {none}% | risiti zimehifadhiwa {kept}% · zimeonyeshwa {shown}% · bila risiti {none}% |
+| `admin.alerts.title` | Alerts | Tahadhari |
+| `admin.alerts.intro` | Private to the admin. Orders are never blocked: an alert only tells you that a word from the list appeared in an order. | Ni siri ya msimamizi tu. Oda hazizuiwi kamwe: tahadhari inakuambia tu kwamba neno kutoka kwenye orodha limeonekana kwenye oda. |
+| `admin.alerts.banner` | {count, plural, one {# new alert} other {# new alerts}} | {count, plural, one {Tahadhari # mpya} other {Tahadhari # mpya}} |
+| `admin.alerts.toastNew` | {count, plural, one {New alert} other {# new alerts}} | {count, plural, one {Tahadhari mpya} other {Tahadhari # mpya}} |
+| `admin.alerts.view.list` | Latest first | Mpya kwanza |
+| `admin.alerts.view.clients` | By client | Kwa mteja |
+| `admin.alerts.filterStatus` | Status | Hali |
+| `admin.alerts.filterCategory` | Category | Aina |
+| `admin.alerts.statusOpen` | To check | Za kuangalia |
+| `admin.alerts.statusAll` | All | Zote |
+| `admin.alerts.categoryAll` | All categories | Aina zote |
+| `admin.alerts.status.new` | New | Mpya |
+| `admin.alerts.status.seen` | Seen | Imeonekana |
+| `admin.alerts.status.handled` | Handled | Imeshughulikiwa |
+| `admin.alerts.status.dismissed` | Ignored | Imepuuzwa |
+| `admin.alerts.category.alcohol` | Alcohol | Pombe |
+| `admin.alerts.category.tobacco_drugs` | Tobacco / drugs | Tumbaku / dawa za kulevya |
+| `admin.alerts.category.health` | Health | Afya |
+| `admin.alerts.category.money` | Money | Pesa |
+| `admin.alerts.category.danger` | Danger | Hatari |
+| `admin.alerts.category.insult` | Insult | Matusi |
+| `admin.alerts.typedText` | Exact text typed | Maandishi kamili yaliyoandikwa |
+| `admin.alerts.whereFound` | Where | Mahali |
+| `admin.alerts.inItem` | Item in the shopping list | Bidhaa kwenye orodha ya manunuzi |
+| `admin.alerts.inNote` | Note to the Boda | Ujumbe kwa Boda |
+| `admin.alerts.client` | Client | Mteja |
+| `admin.alerts.textRemoved` | (text removed after the retention period) | (maandishi yameondolewa baada ya muda wa kuhifadhi) |
+| `admin.alerts.recurrence` | {n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} {category} alert in 30 days | Tahadhari ya {n} ya {category} ndani ya siku 30 |
+| `admin.alerts.call` | Call | Piga simu |
+| `admin.alerts.whatsapp` | WhatsApp | WhatsApp |
+| `admin.alerts.openOrder` | Open the order | Fungua oda |
+| `admin.alerts.privateNote` | Private note (only you see it) | Maelezo ya siri (wewe tu unaona) |
+| `admin.alerts.actions.seen` | Seen | Nimeona |
+| `admin.alerts.actions.handled` | Handled | Imeshughulikiwa |
+| `admin.alerts.actions.dismissed` | Ignore | Puuza |
+| `admin.alerts.actions.saveNote` | Save note | Hifadhi maelezo |
+| `admin.alerts.saved` | Saved | Imehifadhiwa |
+| `admin.alerts.empty` | No alerts here. | Hakuna tahadhari hapa. |
+| `admin.alerts.loadFailed` | Could not load the alerts. Check the connection and try again. | Imeshindwa kupakia tahadhari. Angalia mtandao ujaribu tena. |
+| `admin.alerts.newCount` | {count} new | {count} mpya |
+| `admin.alerts.lastAlert` | Last alert: {when} | Tahadhari ya mwisho: {when} |
+| `admin.settings.title` | Alert settings | Mipangilio ya tahadhari |
+| `admin.settings.intro` | Choose which words raise a private alert. This never stops or changes an order. | Chagua maneno yanayotoa tahadhari ya siri. Hii haizuii wala kubadilisha oda yoyote. |
+| `admin.settings.master` | Alerts | Tahadhari |
+| `admin.settings.masterOn` | On: matching orders create an alert. | Imewashwa: oda zenye neno la orodha zinatoa tahadhari. |
+| `admin.settings.masterOff` | Off: no alert is created at all. | Imezimwa: hakuna tahadhari inayotolewa kabisa. |
+| `admin.settings.last30` | {count} in the last 30 days | {count} ndani ya siku 30 zilizopita |
+| `admin.settings.saved` | Saved | Imehifadhiwa |
+| `admin.settings.loadFailed` | Could not load the settings. Try again. | Imeshindwa kupakia mipangilio. Jaribu tena. |
+| `admin.settings.testTitle` | Test a text | Jaribu maandishi |
+| `admin.settings.testLabel` | Text to test | Maandishi ya kujaribu |
+| `admin.settings.testPlaceholder` | e.g. 2 bottles of Tusker | mfano: chupa 2 za Tusker |
+| `admin.settings.testButton` | Test | Jaribu |
+| `admin.settings.testWould` | This text WOULD raise an alert. | Maandishi haya YATATOA tahadhari. |
+| `admin.settings.testMatchOff` | A word matches but its alert is switched off: no alert. | Neno linalingana lakini tahadhari yake imezimwa: hakuna tahadhari. |
+| `admin.settings.testNone` | No word from the list matches: no alert. | Hakuna neno la orodha linalolingana: hakuna tahadhari. |
+| `admin.settings.wouldAlert` | alert | tahadhari |
+| `admin.settings.reasonMaster` | alerts are off | tahadhari zimezimwa |
+| `admin.settings.reasonCategory` | category is off | aina imezimwa |
+| `admin.settings.reasonTerm` | this word is off | neno hili limezimwa |
+| `admin.settings.reasonInactive` | this word is removed | neno hili limeondolewa |
+| `admin.settings.addTitle` | Add a word | Ongeza neno |
+| `admin.settings.termLabel` | Word or short phrase | Neno au kifungu kifupi |
+| `admin.settings.categoryLabel` | Category | Aina |
+| `admin.settings.alertOnLabel` | Raise an alert for this word | Toa tahadhari kwa neno hili |
+| `admin.settings.add` | Add | Ongeza |
+| `admin.settings.termAdded` | Word added | Neno limeongezwa |
+| `admin.settings.termsTitle` | Words | Maneno |
+| `admin.settings.termsHint` | Whole words only: "gin" matches "gin" but not "ginger". Switch a word off to stop its alerts. | Neno kamili tu: "gin" inalingana na "gin" lakini si "ginger". Zima neno ili kuacha tahadhari zake. |
+| `admin.settings.remove` | Remove | Ondoa |
+| `admin.settings.restore` | Restore | Rudisha |
+| `admin.settings.retentionTitle` | Retention | Muda wa kuhifadhi |
+| `admin.settings.retentionHint` | Handled or ignored alerts older than this are deleted. Old open alerts lose their text and note. Counters are kept. | Tahadhari zilizoshughulikiwa au kupuuzwa zaidi ya muda huu zinafutwa. Tahadhari wazi za zamani zinapoteza maandishi na maelezo. Hesabu zinabaki. |
+| `admin.settings.retentionLabel` | Days | Siku |
+| `admin.settings.save` | Save | Hifadhi |
 
 ## errors
 
@@ -524,6 +602,10 @@ _Shown to people when something fails: must be short and not blaming._
 | `errors.item_not_found` | This item was not found. | Bidhaa hii haikupatikana. |
 | `errors.invalid_problem` | Please choose a reason. | Tafadhali chagua sababu. |
 | `errors.already_reported` | A problem was already reported for this order. | Tatizo tayari liliripotiwa kwa agizo hili. |
+| `errors.invalid_term` | Enter a word of at most 60 characters and choose a category. | Andika neno lisilozidi herufi 60 na uchague aina. |
+| `errors.term_exists` | This word is already in the list. | Neno hili tayari liko kwenye orodha. |
+| `errors.invalid_setting` | This value is not valid. | Thamani hii si sahihi. |
+| `errors.invalid_alert` | This alert status is not valid. | Hali hii ya tahadhari si sahihi. |
 
 ## shopping
 
@@ -657,4 +739,15 @@ _Shown to people when something fails: must be short and not blaming._
 | `shoppingBoda.deliveryFeeInput` | Delivery fee (KSh) | Ada ya kuleta (KSh) |
 | `shoppingBoda.receiptsShown` | I showed the receipts to the client | Nimemwonyesha mteja risiti |
 | `shoppingBoda.deliveredNeeds` | Enter the delivery fee and tick “I showed the receipts to the client”. | Weka ada ya kuleta na uweke tiki kwenye “Nimemwonyesha mteja risiti”. |
+
+## privacy
+
+| Key | English | Kiswahili (à relire) |
+|---|---|---|
+| `privacy.title` | Privacy | Faragha |
+| `privacy.notice` | The app team can view the content of orders, in particular for safety, to follow the service, and to offer you support if you wish. | Timu ya programu inaweza kuona maelezo ya oda, hasa kwa usalama, kufuatilia huduma, na kukupa msaada ukitaka. |
+| `privacy.more` | Your phone number and your orders are never shared with other people or companies. | Namba yako ya simu na oda zako hazitolewi kamwe kwa watu au kampuni nyingine. |
+| `privacy.understood` | I understand | Nimeelewa |
+| `privacy.close` | Close | Funga |
+| `privacy.link` | Privacy | Faragha |
 

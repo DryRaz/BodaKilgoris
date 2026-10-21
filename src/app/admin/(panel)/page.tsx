@@ -3,6 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { Loading } from '@/components/app-header';
+import Link from 'next/link';
+import { useAlertCount } from '@/components/admin/alert-count';
 import { Card } from '@/components/ui';
 import { useFormat } from '@/hooks/useFormat';
 import { getSupabase } from '@/lib/supabase/client';
@@ -30,6 +32,8 @@ const REFRESH_MS = 30_000;
 export default function AdminOverviewPage() {
   const t = useTranslations('admin.overview');
   const fmt = useFormat();
+  const ta = useTranslations('admin.alerts');
+  const { count: alertCount } = useAlertCount();
   const [data, setData] = useState<Overview | null>(null);
   const [series, setSeries] = useState<DayRow[]>([]);
 
@@ -55,6 +59,12 @@ export default function AdminOverviewPage() {
 
   return (
     <>
+      {alertCount > 0 && (
+        <Link href="/admin/alerts" data-testid="alert-banner" className="flex min-h-12 items-center justify-between gap-3 rounded-2xl border-2 border-accent-400 bg-warn-50 px-4 py-3 font-bold text-[#7a5a00] active:opacity-80">
+          <span>🔔 {ta('banner', { count: alertCount })}</span>
+          <span aria-hidden>→</span>
+        </Link>
+      )}
       <div>
         <h2 className="text-2xl font-extrabold">{t('question')}</h2>
         <p className="text-sm text-muted">{t('countedHint')}</p>

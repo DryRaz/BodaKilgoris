@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useState } from 'react';
 import { AppHeader, Loading, Page } from '@/components/app-header';
 import { homeFor, useAuth } from '@/components/auth-provider';
@@ -20,6 +21,7 @@ export default function SettingsPage() {
   const tc = useTranslations('common');
   const { profile, boda, loading, refresh, signOut } = useAuth();
   const ta = useTranslations('auth');
+  const tp = useTranslations('privacy');
   const toast = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -72,6 +74,13 @@ export default function SettingsPage() {
             <Button variant="danger" className="w-full" onClick={signOut}>{tc('logout')}</Button>
           </>
         )}
+
+        <Card className="space-y-1">
+          <Link href="/privacy" className="flex min-h-12 items-center justify-between gap-3 text-lg font-extrabold">
+            <span>🔒 {tp('title')}</span>
+            <span aria-hidden className="text-muted">→</span>
+          </Link>
+        </Card>
 
         <InstallPrompt />
         <Card className="space-y-1 text-sm text-muted">

@@ -266,7 +266,9 @@
       "map": "Live map",
       "places": "Places",
       "shopping": "Shopping",
-      "catalog": "Catalogue"
+      "catalog": "Catalogue",
+      "alerts": "Alerts",
+      "settings": "Settings"
     },
     "overview": {
       "question": "How many real rides go through the app?",
@@ -340,7 +342,8 @@
       "duration": "Duration",
       "noRides": "No rides in this period.",
       "showing": "Showing {count} rides",
-      "limitReached": "Only the latest {count} are shown. Narrow the dates or export the CSV."
+      "limitReached": "Only the latest {count} are shown. Narrow the dates or export the CSV.",
+      "rideNotFound": "This order was not found."
     },
     "map": {
       "title": "Available Bodas",
@@ -427,6 +430,93 @@
       "footer": "No money goes through the app: the Boda advances it and the client repays on delivery.",
       "line": "{orders} orders · {counted} counted",
       "receiptsLine": "receipts kept {kept}% · shown {shown}% · without receipt {none}%"
+    },
+    "alerts": {
+      "title": "Alerts",
+      "intro": "Private to the admin. Orders are never blocked: an alert only tells you that a word from the list appeared in an order.",
+      "banner": "{count, plural, one {# new alert} other {# new alerts}}",
+      "toastNew": "{count, plural, one {New alert} other {# new alerts}}",
+      "view": {
+        "list": "Latest first",
+        "clients": "By client"
+      },
+      "filterStatus": "Status",
+      "filterCategory": "Category",
+      "statusOpen": "To check",
+      "statusAll": "All",
+      "categoryAll": "All categories",
+      "status": {
+        "new": "New",
+        "seen": "Seen",
+        "handled": "Handled",
+        "dismissed": "Ignored"
+      },
+      "category": {
+        "alcohol": "Alcohol",
+        "tobacco_drugs": "Tobacco / drugs",
+        "health": "Health",
+        "money": "Money",
+        "danger": "Danger",
+        "insult": "Insult"
+      },
+      "typedText": "Exact text typed",
+      "whereFound": "Where",
+      "inItem": "Item in the shopping list",
+      "inNote": "Note to the Boda",
+      "client": "Client",
+      "textRemoved": "(text removed after the retention period)",
+      "recurrence": "{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} {category} alert in 30 days",
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "openOrder": "Open the order",
+      "privateNote": "Private note (only you see it)",
+      "actions": {
+        "seen": "Seen",
+        "handled": "Handled",
+        "dismissed": "Ignore",
+        "saveNote": "Save note"
+      },
+      "saved": "Saved",
+      "empty": "No alerts here.",
+      "loadFailed": "Could not load the alerts. Check the connection and try again.",
+      "newCount": "{count} new",
+      "lastAlert": "Last alert: {when}"
+    },
+    "settings": {
+      "title": "Alert settings",
+      "intro": "Choose which words raise a private alert. This never stops or changes an order.",
+      "master": "Alerts",
+      "masterOn": "On: matching orders create an alert.",
+      "masterOff": "Off: no alert is created at all.",
+      "last30": "{count} in the last 30 days",
+      "saved": "Saved",
+      "loadFailed": "Could not load the settings. Try again.",
+      "testTitle": "Test a text",
+      "testLabel": "Text to test",
+      "testPlaceholder": "e.g. 2 bottles of Tusker",
+      "testButton": "Test",
+      "testWould": "This text WOULD raise an alert.",
+      "testMatchOff": "A word matches but its alert is switched off: no alert.",
+      "testNone": "No word from the list matches: no alert.",
+      "wouldAlert": "alert",
+      "reasonMaster": "alerts are off",
+      "reasonCategory": "category is off",
+      "reasonTerm": "this word is off",
+      "reasonInactive": "this word is removed",
+      "addTitle": "Add a word",
+      "termLabel": "Word or short phrase",
+      "categoryLabel": "Category",
+      "alertOnLabel": "Raise an alert for this word",
+      "add": "Add",
+      "termAdded": "Word added",
+      "termsTitle": "Words",
+      "termsHint": "Whole words only: \"gin\" matches \"gin\" but not \"ginger\". Switch a word off to stop its alerts.",
+      "remove": "Remove",
+      "restore": "Restore",
+      "retentionTitle": "Retention",
+      "retentionHint": "Handled or ignored alerts older than this are deleted. Old open alerts lose their text and note. Counters are kept.",
+      "retentionLabel": "Days",
+      "save": "Save"
     }
   },
   "errors": {
@@ -473,7 +563,11 @@
     "receipts_required": "Please tick the receipts box first.",
     "item_not_found": "This item was not found.",
     "invalid_problem": "Please choose a reason.",
-    "already_reported": "A problem was already reported for this order."
+    "already_reported": "A problem was already reported for this order.",
+    "invalid_term": "Enter a word of at most 60 characters and choose a category.",
+    "term_exists": "This word is already in the list.",
+    "invalid_setting": "This value is not valid.",
+    "invalid_alert": "This alert status is not valid."
   },
   "shopping": {
     "homeTitle": "What do you need?",
@@ -613,5 +707,13 @@
     "deliveryFeeInput": "Delivery fee (KSh)",
     "receiptsShown": "I showed the receipts to the client",
     "deliveredNeeds": "Enter the delivery fee and tick “I showed the receipts to the client”."
+  },
+  "privacy": {
+    "title": "Privacy",
+    "notice": "The app team can view the content of orders, in particular for safety, to follow the service, and to offer you support if you wish.",
+    "more": "Your phone number and your orders are never shared with other people or companies.",
+    "understood": "I understand",
+    "close": "Close",
+    "link": "Privacy"
   }
 }

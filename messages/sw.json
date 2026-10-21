@@ -266,7 +266,9 @@
       "map": "Ramani ya moja kwa moja",
       "places": "Maeneo",
       "shopping": "Manunuzi",
-      "catalog": "Orodha ya bidhaa"
+      "catalog": "Orodha ya bidhaa",
+      "alerts": "Tahadhari",
+      "settings": "Mipangilio"
     },
     "overview": {
       "question": "Ni safari ngapi za kweli zinapita kwenye programu?",
@@ -340,7 +342,8 @@
       "duration": "Muda",
       "noRides": "Hakuna safari katika kipindi hiki.",
       "showing": "Safari {count} zinaonyeshwa",
-      "limitReached": "Safari {count} za mwisho tu ndizo zinaonyeshwa. Punguza tarehe au pakua CSV."
+      "limitReached": "Safari {count} za mwisho tu ndizo zinaonyeshwa. Punguza tarehe au pakua CSV.",
+      "rideNotFound": "Oda hii haikupatikana."
     },
     "map": {
       "title": "Boda zilizo tayari",
@@ -427,6 +430,93 @@
       "footer": "Hakuna pesa inayopita kwenye programu: Boda anatoa kwanza na mteja anamlipa akifikishiwa.",
       "line": "maagizo {orders} · yaliyohesabiwa {counted}",
       "receiptsLine": "risiti zimehifadhiwa {kept}% · zimeonyeshwa {shown}% · bila risiti {none}%"
+    },
+    "alerts": {
+      "title": "Tahadhari",
+      "intro": "Ni siri ya msimamizi tu. Oda hazizuiwi kamwe: tahadhari inakuambia tu kwamba neno kutoka kwenye orodha limeonekana kwenye oda.",
+      "banner": "{count, plural, one {Tahadhari # mpya} other {Tahadhari # mpya}}",
+      "toastNew": "{count, plural, one {Tahadhari mpya} other {Tahadhari # mpya}}",
+      "view": {
+        "list": "Mpya kwanza",
+        "clients": "Kwa mteja"
+      },
+      "filterStatus": "Hali",
+      "filterCategory": "Aina",
+      "statusOpen": "Za kuangalia",
+      "statusAll": "Zote",
+      "categoryAll": "Aina zote",
+      "status": {
+        "new": "Mpya",
+        "seen": "Imeonekana",
+        "handled": "Imeshughulikiwa",
+        "dismissed": "Imepuuzwa"
+      },
+      "category": {
+        "alcohol": "Pombe",
+        "tobacco_drugs": "Tumbaku / dawa za kulevya",
+        "health": "Afya",
+        "money": "Pesa",
+        "danger": "Hatari",
+        "insult": "Matusi"
+      },
+      "typedText": "Maandishi kamili yaliyoandikwa",
+      "whereFound": "Mahali",
+      "inItem": "Bidhaa kwenye orodha ya manunuzi",
+      "inNote": "Ujumbe kwa Boda",
+      "client": "Mteja",
+      "textRemoved": "(maandishi yameondolewa baada ya muda wa kuhifadhi)",
+      "recurrence": "Tahadhari ya {n} ya {category} ndani ya siku 30",
+      "call": "Piga simu",
+      "whatsapp": "WhatsApp",
+      "openOrder": "Fungua oda",
+      "privateNote": "Maelezo ya siri (wewe tu unaona)",
+      "actions": {
+        "seen": "Nimeona",
+        "handled": "Imeshughulikiwa",
+        "dismissed": "Puuza",
+        "saveNote": "Hifadhi maelezo"
+      },
+      "saved": "Imehifadhiwa",
+      "empty": "Hakuna tahadhari hapa.",
+      "loadFailed": "Imeshindwa kupakia tahadhari. Angalia mtandao ujaribu tena.",
+      "newCount": "{count} mpya",
+      "lastAlert": "Tahadhari ya mwisho: {when}"
+    },
+    "settings": {
+      "title": "Mipangilio ya tahadhari",
+      "intro": "Chagua maneno yanayotoa tahadhari ya siri. Hii haizuii wala kubadilisha oda yoyote.",
+      "master": "Tahadhari",
+      "masterOn": "Imewashwa: oda zenye neno la orodha zinatoa tahadhari.",
+      "masterOff": "Imezimwa: hakuna tahadhari inayotolewa kabisa.",
+      "last30": "{count} ndani ya siku 30 zilizopita",
+      "saved": "Imehifadhiwa",
+      "loadFailed": "Imeshindwa kupakia mipangilio. Jaribu tena.",
+      "testTitle": "Jaribu maandishi",
+      "testLabel": "Maandishi ya kujaribu",
+      "testPlaceholder": "mfano: chupa 2 za Tusker",
+      "testButton": "Jaribu",
+      "testWould": "Maandishi haya YATATOA tahadhari.",
+      "testMatchOff": "Neno linalingana lakini tahadhari yake imezimwa: hakuna tahadhari.",
+      "testNone": "Hakuna neno la orodha linalolingana: hakuna tahadhari.",
+      "wouldAlert": "tahadhari",
+      "reasonMaster": "tahadhari zimezimwa",
+      "reasonCategory": "aina imezimwa",
+      "reasonTerm": "neno hili limezimwa",
+      "reasonInactive": "neno hili limeondolewa",
+      "addTitle": "Ongeza neno",
+      "termLabel": "Neno au kifungu kifupi",
+      "categoryLabel": "Aina",
+      "alertOnLabel": "Toa tahadhari kwa neno hili",
+      "add": "Ongeza",
+      "termAdded": "Neno limeongezwa",
+      "termsTitle": "Maneno",
+      "termsHint": "Neno kamili tu: \"gin\" inalingana na \"gin\" lakini si \"ginger\". Zima neno ili kuacha tahadhari zake.",
+      "remove": "Ondoa",
+      "restore": "Rudisha",
+      "retentionTitle": "Muda wa kuhifadhi",
+      "retentionHint": "Tahadhari zilizoshughulikiwa au kupuuzwa zaidi ya muda huu zinafutwa. Tahadhari wazi za zamani zinapoteza maandishi na maelezo. Hesabu zinabaki.",
+      "retentionLabel": "Siku",
+      "save": "Hifadhi"
     }
   },
   "errors": {
@@ -473,7 +563,11 @@
     "receipts_required": "Tafadhali weka tiki kwenye kisanduku cha risiti kwanza.",
     "item_not_found": "Bidhaa hii haikupatikana.",
     "invalid_problem": "Tafadhali chagua sababu.",
-    "already_reported": "Tatizo tayari liliripotiwa kwa agizo hili."
+    "already_reported": "Tatizo tayari liliripotiwa kwa agizo hili.",
+    "invalid_term": "Andika neno lisilozidi herufi 60 na uchague aina.",
+    "term_exists": "Neno hili tayari liko kwenye orodha.",
+    "invalid_setting": "Thamani hii si sahihi.",
+    "invalid_alert": "Hali hii ya tahadhari si sahihi."
   },
   "shopping": {
     "homeTitle": "Unahitaji nini?",
@@ -613,5 +707,13 @@
     "deliveryFeeInput": "Ada ya kuleta (KSh)",
     "receiptsShown": "Nimemwonyesha mteja risiti",
     "deliveredNeeds": "Weka ada ya kuleta na uweke tiki kwenye “Nimemwonyesha mteja risiti”."
+  },
+  "privacy": {
+    "title": "Faragha",
+    "notice": "Timu ya programu inaweza kuona maelezo ya oda, hasa kwa usalama, kufuatilia huduma, na kukupa msaada ukitaka.",
+    "more": "Namba yako ya simu na oda zako hazitolewi kamwe kwa watu au kampuni nyingine.",
+    "understood": "Nimeelewa",
+    "close": "Funga",
+    "link": "Faragha"
   }
 }
