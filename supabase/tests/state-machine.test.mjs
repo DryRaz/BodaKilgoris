@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 // RLS + the ride state machine. Usage: npm run test:db
 const here = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = fs.readdirSync(path.join(here, '..', 'migrations')).filter((f) => f.endsWith('.sql')).sort();
+const SEED_MIGRATION = '20261022000000_catalog_seed_and_public_read.sql';
 
 const db = new PGlite();
 let failures = 0, passes = 0;
@@ -251,7 +252,7 @@ await fails('c1', `select request_ride('${ID.b2}', null, 34.88, 'market', -1.0, 
 await fails('c1', `select request_ride('${ID.b2}', -1.0, 999, 'market', -1.0, 34.8)`, 'invalid_location');
 
 console.log('\n# migration safety: existing rides survive, re-running is harmless');
-await db.exec(fs.readFileSync(path.join(here, '..', 'migrations', MIGRATIONS.at(-1)), 'utf8'));
+await db.exec(fs.readFileSync(path.join(here, '..', 'migrations', SEED_MIGRATION), 'utf8'));
 ok((await q('c1', `select * from places`)).length === 1, 're-running the migration keeps the places');
 {
   const old = new PGlite();
@@ -308,7 +309,7 @@ const sugarBefore = cat.find((c) => c.name_en === 'Sugar');
 await as('admin', () => db.query(`select admin_save_catalog_item('${sugarBefore.id}', 'Sugar (white)', 'Sukari nyeupe', 'staples', 'kg', true)`));
 const candles = cat.find((c) => c.name_en === 'Candles');
 await as('admin', () => db.query(`select admin_save_catalog_item('${candles.id}', 'Candles', 'Mishumaa', 'home', 'packet', false)`));
-const seedSql = fs.readFileSync(path.join(here, '..', 'migrations', MIGRATIONS.at(-1)), 'utf8');
+const seedSql = fs.readFileSync(path.join(here, '..', 'migrations', SEED_MIGRATION), 'utf8');
 await db.exec(seedSql);
 await db.exec(seedSql);
 const total = (await db.query(`select count(*)::int n from catalog_items`)).rows[0].n;
@@ -324,7 +325,7 @@ await as('admin', () => db.query(`select admin_save_catalog_item('${candles.id}'
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to anon, authenticated; grant execute on function auth.uid() to anon, authenticated; grant usage on schema public to anon, authenticated;
     alter default privileges in schema public grant all on tables to anon, authenticated; alter default privileges in schema public grant execute on functions to anon, authenticated;`);
-  for (const m of MIGRATIONS.slice(0, -1)) await old.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8'));
+  for (const m of MIGRATIONS.filter((x) => x !== SEED_MIGRATION)) await old.exec(fs.readFileSync(path.join(here, '..', 'migrations', m), 'utf8'));
   await old.exec(`delete from catalog_items; insert into catalog_items (name_en, name_sw, category, unit, sort_order) values ('Sugar', 'Sukari', 'staples', 'kg', 10), ('Rice', 'Mchele', 'staples', 'kg', 30)`);
   await old.exec(seedSql);
   const n = (await old.query(`select count(*)::int n from catalog_items`)).rows[0].n;
